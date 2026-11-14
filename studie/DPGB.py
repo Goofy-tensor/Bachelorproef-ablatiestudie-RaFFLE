@@ -18,7 +18,7 @@ def indicator(x,m,a,b):
         return b
 
 def estimate_sigma(functie,SNR):
-    X = np.random.uniform(-1, 1, size=(10^6,10)) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
+    X = np.random.uniform(-1, 1, size=(10**6,10)) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
     fun = np.apply_along_axis(functie, 1, X)# axis 0 = volgens kolommen, 1 volgens rijen
     sigma_squared = np.var(fun)/SNR
     return sigma_squared

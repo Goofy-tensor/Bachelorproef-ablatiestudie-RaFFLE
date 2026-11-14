@@ -14,7 +14,7 @@ def f(X):
     return 10*np.sin(np.pi*X[1]*X[2]) + 20*(X[3] -0.5)**2 + 10*X[4] + 5*X[5]
 
 def estimate_sigma(functie,SNR):
-    X = np.random.uniform(0, 1, size=(10^6,10)) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
+    X = np.random.uniform(0, 1, size=(10**6,10)) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
     fun = np.apply_along_axis(functie, 1, X)# axis 0 = volgens kolommen, 1 volgens rijen
     sigma_squared = np.var(fun)/SNR
     return sigma_squared

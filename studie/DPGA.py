@@ -26,7 +26,7 @@ def f(X):
     return np.dot(beta,X)
 
 def estimate_sigma(mean,cov,functie,SNR):
-    X = np.random.multivariate_normal(mean, cov, size=10^6) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
+    X = np.random.multivariate_normal(mean, cov, size=10**6) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
     fun = np.apply_along_axis(functie, 1, X)# axis 0 = volgens kolommen, 1 volgens rijen
     sigma_squared = np.var(fun)/SNR
     return sigma_squared
