@@ -1,6 +1,6 @@
 import numpy as np
 from main import alpha_prediction
-
+import csv
 np.random.seed(42)
 #Y = f(X) + eps
 #eps uit normale verdeling
@@ -25,20 +25,6 @@ def f(X):
     beta = np.array([3,-2,1.5,-1,0.5,0,0,0,0,0])
     return np.dot(beta,X)
 
-def estimate_sigma(mean,cov,functie,SNR):
-    X = np.random.multivariate_normal(mean, cov, size=10**6) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
-    fun = np.apply_along_axis(functie, 1, X)# axis 0 = volgens kolommen, 1 volgens rijen
-    sigma_squared = np.var(fun)/SNR
-    return sigma_squared
-
-def generate_data(functie,SNR,N):
-    mean = np.zeros(10)
-    cov =  covariantie(10)
-    sigma_squared = estimate_sigma(mean,cov,functie,SNR)
-    X_train, train_y, train_ruis_y = data(mean,cov,functie,N,sigma_squared)
-    X_test, test_y, test_ruis_y = data(mean,cov,functie,10000,sigma_squared)
-    return X_train, train_y, train_ruis_y, X_test, test_y, test_ruis_y
-
 def covariantie(N):
     M = np.zeros((N,N))
     for i in range(N):
@@ -49,6 +35,20 @@ def covariantie(N):
                 M[i,j] = 1/2
     return M + M.T
 
+def estimate_sigma(mean,cov,functie):
+    SNR = [1,3,10]
+    sigma_squared = np.zeros(3)
+    X = np.random.multivariate_normal(mean, cov, size=10**6) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
+    fun = np.apply_along_axis(functie, 1, X)# axis 0 = volgens kolommen, 1 volgens rijen
+    for i in range(3):
+        sigma_squared[i] = np.var(fun)/SNR[i]
+    return sigma_squared
+
+def generate_data(functie,N,sigma_squared):
+    X_train, train_y, train_ruis_y = data(mean,cov,functie,N,sigma_squared)
+    X_test, test_y, test_ruis_y = data(mean,cov,functie,10000,sigma_squared)
+    return X_train, train_y, train_ruis_y, X_test, test_y, test_ruis_y
+
 def data(mean,cov,functie,n,sigma_squared):
     X = np.random.multivariate_normal(mean, cov, size=n)
     fun = np.apply_along_axis(functie, 1, X)
@@ -56,6 +56,18 @@ def data(mean,cov,functie,n,sigma_squared):
     fun_ruis = fun + ruis
     return X,fun, fun_ruis
 
-#start met DPG A, SNR 3 en N=1000
-X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = generate_data(f,3,100)
-out = alpha_prediction(X_trainA,X_testA,train_ruis_yA,train_yA,test_yA)
+mean = np.zeros(10)
+cov = covariantie(10)
+SIGMA2 = estimate_sigma(mean,cov,f)
+
+for N in [250,1000,4000]:
+    for i in range(3):
+        X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = generate_data(f, N, SIGMA2[i])
+        out = alpha_prediction(X_trainA, X_testA, train_ruis_yA, test_ruis_yA, test_yA)
+        with open(f'DPGA{N}-{i}.csv', 'w+', newline='') as csvfile:
+            spamwriter = csv.writer(csvfile)
+            for j in range(9):
+                spamwriter.writerow(out[j,])
+
+
+

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 
 #Raffle model fitten
-def RaFFLE_prediction(train_X,test_X,train_ruis_y,train_y,test_y,alpha=1):#n is op hoeveel delen van de dataset je test (eig gwn hoeveel keer)
+def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k,alpha=1):#n is op hoeveel delen van de dataset je test (eig gwn hoeveel keer)
     #model maken
     df = {k: 1 + alpha * (v - 1) for k, v in DEFAULT_DF_SETTINGS.items()}
     #Vraag promotor: Wat doet dit juist? dacht dat je gwn alpha kon ingeven of is alphe wat erbij je BIC komt?
@@ -21,7 +21,7 @@ def RaFFLE_prediction(train_X,test_X,train_ruis_y,train_y,test_y,alpha=1):#n is 
     #start = perf_counter() (geen rekentijd)
 
     #zet hieronder nog alle parameters expliciet (zie effe RaFFLE paper)
-    model = RaFFLE(n_estimators=100,random_state=42,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df) #n_features_node = 1 net zoals in dRaFFLE van paper
+    model = RaFFLE(n_estimators=100,random_state=k,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df) #n_features_node = 1 net zoals in dRaFFLE van paper
     model.fit(train_X, train_ruis_y)
 
     #end = perf_counter()
@@ -30,21 +30,21 @@ def RaFFLE_prediction(train_X,test_X,train_ruis_y,train_y,test_y,alpha=1):#n is 
     #Waarden die we willen weten eruit halen
     predictions_train = model.predict(train_X)
     predictions_test = model.predict(test_X)
-    train_R2 = r2_score(predictions_train,train_y)
-    test_R2 = r2_score(predictions_test,test_y)
-    train_MSE = mean_squared_error(predictions_train,train_y)
-    test_MSE = mean_squared_error(predictions_test, test_y)
+    train_R2 = r2_score(train_ruis_y,predictions_train)
+    test_R2 = r2_score(test_ruis_y,predictions_test)
+    train_MSE = mean_squared_error(train_ruis_y,predictions_train)
+    test_MSE = mean_squared_error(test_ruis_y,predictions_test)
 
-    y = predictions_train - train_y
-    ruisvrij_error = 1/len(train_X)*(np.dot(y,y))
+    y = predictions_test - test_y
+    ruisvrij_error = 1/len(test_X)*(np.dot(y,y))
 
     train_M = model.predict(train_X, individual=True)
     test_M = model.predict(test_X, individual=True)
 
     train_boom_R2 = boom(train_M,train_ruis_y,r2_score)
-    test_boom_R2 = boom(test_M,test_y,r2_score)
-    train_MSE_boom = boom(train_M, train_y,mean_squared_error)
-    test_MSE_boom = boom(test_M, test_y, mean_squared_error)
+    test_boom_R2 = boom(test_M,test_ruis_y,r2_score)
+    train_MSE_boom = boom(train_M, train_ruis_y,mean_squared_error)
+    test_MSE_boom = boom(test_M,test_ruis_y, mean_squared_error)
     foutcorr = foutcorrelatie(test_M,test_y) #we bekijken hier effectieve f(x)
     ambigu = ambiguiteit(test_M,predictions_test)
 
@@ -62,19 +62,20 @@ def boom(M,Y,fun):
 
 #Foutcorrelatie, hoe veel gelijkaardige fouten de bomen maken
 def foutcorrelatie(M,Y):
+    L = np.zeros((len(Y),100))
     for i in range(100):
         z = M[:,i] - Y
-        M[:,i] = z/(z.dot(z))
-    gramm = M.dot(M.T)
-    intermediate = np.ones(len(Y)).dot(gramm) #elke kolom sommeren
-    return (np.dot(intermediate,np.ones(len(Y)).T)-100)/(100*99)
+        L[:,i] = z/np.sqrt((z.dot(z)))
+    gramm = L.T.dot(L)
+    intermediate = np.ones(100).dot(gramm) #elke kolom sommeren
+    return (np.dot(intermediate,np.ones(100).T)-100)/(100*99)
 
 #Abbiguïteit, hoeveel boom gemiddeld afwijkt
 def ambiguiteit(M,Y):
     L = np.zeros(100)
     for i in range(100):
-        M[:, i] = M[:, i] - Y
-        L[i] = np.dot(M[:, i],M[:, i])
+        z = M[:, i] - Y
+        L[i] = np.dot(z,z)
     return sum(L)/(100 * len(Y))
 
 
@@ -92,11 +93,11 @@ def summary(model):
 
 
 #Meerdere keer prediction doen en gemiddelde nemen
-def iterate_predictions(train_X,test_X,train_ruis_y,train_y,test_y,alpha=1):
+def iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y,alpha=1):
     info = np.zeros((13,30)) #30 want we doen per type 30 predictions
     #node_types = np.zeros((4,30))  # 4 modellen [CON,PCON,LIN,PLIN]
     for i in range(30):
-        info[0,i], info[1,i], info[2,i], info[3,i], info[4,i], info[5,i], info[6,i], info[7,i], info[8,i], info[9,i], info[10,i], info[11,i], info[12,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,train_y,test_y,alpha)
+        info[0,i], info[1,i], info[2,i], info[3,i], info[4,i], info[5,i], info[6,i], info[7,i], info[8,i], info[9,i], info[10,i], info[11,i], info[12,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,i,alpha)
         #node_types[:,i] = node_types_model
     return np.average(info[0,]), np.average(info[1,]), np.average(info[2,]), np.average(info[3,]), np.average(info[4,]), np.average(info[5,]), np.average(info[6,]), np.average(info[7,]), np.average(info[8,]), np.average(info[9,]), np.average(info[10,]), np.average(info[11,]), np.average(info[12,])
 
@@ -113,15 +114,15 @@ def totaltypes(model): #ik denk dat dit niet zo efficiënt is
         if x == 'lin':
             types[2] += 1
         if x == 'plin':
-            types[0] += 1
+            types[3] += 1
     return types
 
 #Echte predictions
-def alpha_prediction(train_X,test_X,train_ruis_y,train_y,test_y): #R=30 gevraagd dus iteratie 30 keer
+def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y): #R=30 gevraagd dus iteratie 30 keer
     alpha_results = np.zeros((13,9))
     #alpha_nodes = np.zeros((4,9))
     for i,alpha in enumerate([0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1]): #0; 0,01; 0,05; 0,1; 0,2; 0,35; 0,5; 0,75; 1
-        alpha_results[0,i], alpha_results[1,i], alpha_results[2,i], alpha_results[3,i],alpha_results[4,i], alpha_results[5,i], alpha_results[6,i], alpha_results[7,i], alpha_results[8,i], alpha_results[9,i], alpha_results[10,i], alpha_results[11,i], alpha_results[12,i] = iterate_predictions(train_X,test_X,train_ruis_y,train_y,test_y,alpha)
+        alpha_results[0,i], alpha_results[1,i], alpha_results[2,i], alpha_results[3,i],alpha_results[4,i], alpha_results[5,i], alpha_results[6,i], alpha_results[7,i], alpha_results[8,i], alpha_results[9,i], alpha_results[10,i], alpha_results[11,i], alpha_results[12,i] = iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y,alpha)
     return alpha_results
 
 
