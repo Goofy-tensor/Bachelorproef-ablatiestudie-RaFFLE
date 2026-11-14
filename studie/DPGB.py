@@ -32,7 +32,7 @@ def generate_data(functie,SNR,N):
 def data(functie,n,sigma_squared):
     X = np.random.uniform(-1, 1, size=(n,10))
     fun = np.apply_along_axis(functie, 1, X)
-    ruis = np.random.normal(loc=0, scale=sigma_squared, size=n)
+    ruis = np.random.normal(loc=0, scale=np.sqrt(sigma_squared), size=n)
     fun_ruis = fun + ruis
     return X,fun, fun_ruis
 

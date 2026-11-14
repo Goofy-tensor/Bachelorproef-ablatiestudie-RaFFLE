@@ -52,7 +52,7 @@ def covariantie(N):
 def data(mean,cov,functie,n,sigma_squared):
     X = np.random.multivariate_normal(mean, cov, size=n)
     fun = np.apply_along_axis(functie, 1, X)
-    ruis = np.random.normal(loc=0, scale=sigma_squared, size=n)
+    ruis = np.random.normal(loc=0, scale=np.sqrt(sigma_squared), size=n)
     fun_ruis = fun + ruis
     return X,fun, fun_ruis
 
