@@ -45,15 +45,15 @@ axes[1].set_title("Prijs vs. oppervlakte")
 axes[1].legend()
 
 # 3. Voorspelling op een fijn rooster, met X2 vast op zijn gemiddelde
-#grid = np.linspace(X[:, 0].min(), X[:, 0].max(), 200)
-#X_grid = np.column_stack([grid, np.full_like(grid, X[:, 1].mean())])
-#axes[2].scatter(X[:, 0], y, color="tab:gray", label="werkelijk")
-#axes[2].plot(grid, model.predict(X_grid), color="tab:red",
-             #label="PILOT (X2 = gemiddelde)")
-#axes[2].set_xlabel("Woonoppervlakte (m$^2$)")
-#axes[2].set_ylabel("Prijs (x 1000 euro)")
-#axes[2].set_title("Voorspellingscurve")
-#axes[2].legend()
+grid = np.linspace(X[:, 0].min(), X[:, 0].max(), 200)
+X_grid = np.column_stack([grid, np.full_like(grid, X[:, 1].mean())])
+axes[2].scatter(X[:, 0], y, color="tab:gray", label="werkelijk")
+axes[2].plot(grid, model.predict(X_grid), color="tab:red",
+             label="PILOT (X2 = gemiddelde)")
+axes[2].set_xlabel("Woonoppervlakte (m$^2$)")
+axes[2].set_ylabel("Prijs (x 1000 euro)")
+axes[2].set_title("Voorspellingscurve")
+axes[2].legend()
 
 plt.tight_layout()
 plt.savefig("pilot_voorspellingen.png", dpi=200)
