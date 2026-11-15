@@ -1,5 +1,5 @@
 import numpy as np
-from main import alpha_prediction
+from main import iterate_predictions
 import csv
 np.random.seed(42)
 #Y = f(X) + eps
@@ -60,25 +60,29 @@ mean = np.zeros(10)
 cov = covariantie(10)
 SIGMA2 = estimate_sigma(mean,cov,f)
 
-# Je krijgt hieronder 9 csv_bestanden 3 N x 3SNR. In elk csv_bestand staan 9 rijen (voor de 9 alpha's) en 13 kolommen (voor de 13 eigenschappen van het model). De kolommen zijn:
-# Kolom 1: 
-#
-#
-#
-#
-#
-#
-#
+def relative_R2(M):#delen door de waarde bij alpha=0.5 om te vergelijken
+    for i in [0,1,2,3]:
+        if M[i,6] > 0:
+            M[:,i] = M[:,i]/M[6,i]
+        else:
+            M[:,i] = np.zeros(0)
+            #deze rij beschouwen we dan als niet relevant, oi mss best door max delen dan
+            #want mss is er dan een waarde die wel positief is dus dan kan je wel nog een relevante conclusie trekken
+    return M
 
+def get_output(DPG,fun,S):
+    for N in [250,1000,4000]:
+        for i in range(3):#aanpassen i naar RNS
+            X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = generate_data(fun, N, S[i])
+            out = iterate_predictions(X_trainA, X_testA, train_ruis_yA, test_ruis_yA, test_yA)
+            with open(f'data{DPG}{N}-{i}.csv', 'w+', newline='') as csvfile:
+                spamwriter = csv.writer(csvfile)
+                relative_R2(out[0])
+                for j in range(9):
+                    spamwriter.writerow(out[0][j,])
+            with open(f'hypothese{DPG}{N}-{i}.csv', 'w+', newline='') as csvfile:
+                spamwriter = csv.writer(csvfile)
+                for k in range(1,9):
+                    spamwriter.writerow(out[k])
 
-for N in [250,1000,4000]:
-    for i in range(3):
-        X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = generate_data(f, N, SIGMA2[i])
-        out = alpha_prediction(X_trainA, X_testA, train_ruis_yA, test_ruis_yA, test_yA)
-        with open(f'DPGA{N}-{i}.csv', 'w+', newline='') as csvfile:
-            spamwriter = csv.writer(csvfile)
-            for j in range(9):
-                spamwriter.writerow(out[j,])
-
-
-
+get_output("DPGA",f,SIGMA2)
