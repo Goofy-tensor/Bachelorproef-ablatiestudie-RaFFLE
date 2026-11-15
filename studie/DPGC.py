@@ -1,6 +1,7 @@
 from main import alpha_prediction
 import numpy as np
 import csv
+from DPGA import get_output
 np.random.seed(42)
 #f(x) = 10sin(πx1x2)+20(x3−0,5)^2+10x4+5x5
 
@@ -35,11 +36,5 @@ def data(functie,n,sigma_squared):
     return X,fun, fun_ruis
 
 SIGMA2 = estimate_sigma(f)
-for N in [250,1000,4000]:
-    for i in range(3):
-        X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = generate_data(f, N, SIGMA2[i])
-        out = alpha_prediction(X_trainA, X_testA, train_ruis_yA, test_ruis_yA, test_yA)
-        with open(f'DPGA{N}-{i}.csv', 'w+', newline='') as csvfile:
-            spamwriter = csv.writer(csvfile)
-            for j in range(9):
-                spamwriter.writerow(out[j,])
+
+get_output("DPGC",f,SIGMA2)
