@@ -60,6 +60,17 @@ mean = np.zeros(10)
 cov = covariantie(10)
 SIGMA2 = estimate_sigma(mean,cov,f)
 
+# Je krijgt hieronder 9 csv_bestanden 3 N x 3SNR. In elk csv_bestand staan 9 rijen (voor de 9 alpha's) en 13 kolommen (voor de 13 eigenschappen van het model). De kolommen zijn:
+# Kolom 1: 
+#
+#
+#
+#
+#
+#
+#
+
+
 for N in [250,1000,4000]:
     for i in range(3):
         X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = generate_data(f, N, SIGMA2[i])
