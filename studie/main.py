@@ -4,6 +4,7 @@ from sklearn.metrics import r2_score,mean_squared_error
 import numpy as np
 from time import perf_counter
 import matplotlib.pyplot as plt
+from scipy import stats
 
 
 #Met model.predict(X, individual=True) krijg je de voorspelling van elke boom apart => in matrix
@@ -92,15 +93,40 @@ def summary(model):
     return np.average(max_depth), np.average(max_model_depth)
 
 
-#Meerdere keer prediction doen en gemiddelde nemen
-def iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y,alpha=1):
-    info = np.zeros((13,30)) #30 want we doen per type 30 predictions
+def iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y):
+    info = np.zeros((13,9)) #30 want we doen per type 30 predictions
+    rs_trainMSE = np.zeros(30) #gem over boom
+    rs_G = np.zeros(30) #nu gat enkel voor forest
+    rs_rho = np.zeros(30)
+    minMSE_0 = np.zeros(30) #laagste MSE waarde vergeleken met die bij alpha = 0
+    minMSE_1 = np.zeros(30)
+    versch_ambigu = np.zeros(30) #verschil in ambiguiteit
+    opt_alpha_boom = np.zeros(30)
+    opt_alpha_forest = np.zeros(30)
+    c = np.zeros(30)
     #node_types = np.zeros((4,30))  # 4 modellen [CON,PCON,LIN,PLIN]
     for i in range(30):
-        info[0,i], info[1,i], info[2,i], info[3,i], info[4,i], info[5,i], info[6,i], info[7,i], info[8,i], info[9,i], info[10,i], info[11,i], info[12,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,i,alpha)
-        #node_types[:,i] = node_types_model
-    return np.average(info[0,]), np.average(info[1,]), np.average(info[2,]), np.average(info[3,]), np.average(info[4,]), np.average(info[5,]), np.average(info[6,]), np.average(info[7,]), np.average(info[8,]), np.average(info[9,]), np.average(info[10,]), np.average(info[11,]), np.average(info[12,])
+        matrix = alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y) #dim = (13,9)
+        alpha = [0.0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1.0]
+        rs_trainMSE[i] = stats.spearmanr(alpha,matrix[6,]) #of rij 4 als je voor forest wilt
+        G = matrix[5,:] - matrix[4,:] #generalisatiegat per alpha (voor forestMSEs)
+        rs_G[i] = stats.spearmanr(alpha,G)
+        rs_rho[i] = stats.spearmanr(alpha,matrix[11,:]) #geeft zo onderlijningen omdat het int verwahct maar in voorbeelden in de documentatie
 
+        pos_minMSE_forest = np.argmin(matrix[5,:]) #over testwaarden
+        pos_minMSE_boom = np.argmin(matrix[7, :])
+        opt_alpha_boom[i] = alpha[pos_minMSE_boom]
+        opt_alpha_forest[i] = alpha[pos_minMSE_forest]
+
+        minMSE = matrix[5,pos_minMSE_forest]
+        minMSE_0[i] = matrix[5,0] - minMSE
+        minMSE_1[i] = matrix[5,-1] - minMSE
+        versch_ambigu[i] = matrix[-1,0] - matrix[-1,-1]
+        p = np.polyfit([1,2,3,4,5,6,7,8,9],matrix[5,:],2)
+        c[i] = p[-1]
+
+        info += matrix
+    return info/30, rs_trainMSE, rs_G, rs_rho, minMSE_0, minMSE_1, versch_ambigu, opt_alpha_forest - opt_alpha_boom, c
 
 #Nagaan welke modellen er gebruikt worden
 def totaltypes(model): #ik denk dat dit niet zo efficiënt is
@@ -118,12 +144,12 @@ def totaltypes(model): #ik denk dat dit niet zo efficiënt is
     return types
 
 #Echte predictions
-def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y): #R=30 gevraagd dus iteratie 30 keer
+def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y):
     alpha_results = np.zeros((13,9))
     #alpha_nodes = np.zeros((4,9))
     for i,alpha in enumerate([0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1]): #0; 0,01; 0,05; 0,1; 0,2; 0,35; 0,5; 0,75; 1
-        alpha_results[0,i], alpha_results[1,i], alpha_results[2,i], alpha_results[3,i],alpha_results[4,i], alpha_results[5,i], alpha_results[6,i], alpha_results[7,i], alpha_results[8,i], alpha_results[9,i], alpha_results[10,i], alpha_results[11,i], alpha_results[12,i] = iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y,alpha)
-    return alpha_results
+        alpha_results[0,i], alpha_results[1,i], alpha_results[2,i], alpha_results[3,i],alpha_results[4,i], alpha_results[5,i], alpha_results[6,i], alpha_results[7,i], alpha_results[8,i], alpha_results[9,i], alpha_results[10,i], alpha_results[11,i], alpha_results[12,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,alpha)
+    return alpha_results #matrix met kolommen de alpha waarden en rijen de eigenschappen
 
 
 
