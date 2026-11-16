@@ -13,7 +13,7 @@ from scipy import stats
 
 
 #Raffle model fitten
-def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k,alpha=1):#n is op hoeveel delen van de dataset je test (eig gwn hoeveel keer)
+def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k = 42,alpha=1):#n is op hoeveel delen van de dataset je test (eig gwn hoeveel keer)
     #model maken
     df = {k: 1 + alpha * (v - 1) for k, v in DEFAULT_DF_SETTINGS.items()}
     #Vraag promotor: Wat doet dit juist? dacht dat je gwn alpha kon ingeven of is alphe wat erbij je BIC komt?
@@ -148,7 +148,7 @@ def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y):
     alpha_results = np.zeros((13,9))
     #alpha_nodes = np.zeros((4,9))
     for i,alpha in enumerate([0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1]): #0; 0,01; 0,05; 0,1; 0,2; 0,35; 0,5; 0,75; 1
-        alpha_results[0,i], alpha_results[1,i], alpha_results[2,i], alpha_results[3,i],alpha_results[4,i], alpha_results[5,i], alpha_results[6,i], alpha_results[7,i], alpha_results[8,i], alpha_results[9,i], alpha_results[10,i], alpha_results[11,i], alpha_results[12,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,alpha)
+        alpha_results[0,i], alpha_results[1,i], alpha_results[2,i], alpha_results[3,i],alpha_results[4,i], alpha_results[5,i], alpha_results[6,i], alpha_results[7,i], alpha_results[8,i], alpha_results[9,i], alpha_results[10,i], alpha_results[11,i], alpha_results[12,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k=42,alpha=alpha)
     return alpha_results #matrix met kolommen de alpha waarden en rijen de eigenschappen
 
 
