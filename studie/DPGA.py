@@ -60,15 +60,17 @@ mean = np.zeros(10)
 cov = covariantie(10)
 SIGMA2 = estimate_sigma(mean,cov,f)
 
-def relative_R2(M):#delen door de waarde bij alpha=0.5 om te vergelijken
-    for i in [0,1,2,3]:
-        if M[i,6] > 0:
-            M[i,:] = M[i,:]/M[i,6]
-        else:
-            M[i,:] = np.zeros(M.shape[1])
-            #deze rij beschouwen we dan als niet relevant, oi mss best door max delen dan
-            #want mss is er dan een waarde die wel positief is dus dan kan je wel nog een relevante conclusie trekken
-    return M
+def relatieve_mse(M):#delen door de waarde bij alpha=0.5 om te vergelijken
+    #M is de (13,9) matrix, de MSE's zitten in rijen 4 t/m 7 (train/test forest, train/test boom)
+    #niet in-place: M blijft intact, dus de absolute waarden blijven bewaard (nodig voor plots en sigma^2-lijn)
+    mse = M[4:8,:]
+    t_05 = (mse - mse[:,[6]])/mse[:,[6]]#relatieve verandering t.o.v. alpha = 0.5
+    t_1 = (mse - mse[:,[8]])/mse[:,[8]]#relatieve verandering t.o.v. alpha = 1 (standaard PILOT)
+    #MSE is altijd > 0 (er is ruis), dus geen if nodig
+    #deze rij beschouwen we dan als niet relevant, oi mss best door max delen dan
+    #want mss is er dan een waarde die wel positief is dus dan kan je wel nog een relevante conclusie trekken
+    #(enkel nog relevant bij R2: gebruik daar np.nan in plaats van 0, zodat het zichtbaar blijft)
+    return t_05, t_1
 
 def get_output(DPG,fun,S):
     SNR = [1,3,10] #zelfde volgorde als in estimate_sigma
@@ -78,13 +80,16 @@ def get_output(DPG,fun,S):
             out = iterate_predictions(X_trainA, X_testA, train_ruis_yA, test_ruis_yA, test_yA)
             with open(f'data{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
-                relative_R2(out[0])
-                for j in range(13):
+                for j in range(13):#alle 13 rijen, absolute waarden (was range(9) en gedeeld door alpha=0.5)
                     spamwriter.writerow(out[0][j,])
+            with open(f'relatief{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
+                spamwriter = csv.writer(csvfile)
+                t_05, t_1 = relatieve_mse(out[0])
+                for rij in np.vstack((t_05, t_1)):#eerst 4 rijen t.o.v. 0.5, dan 4 rijen t.o.v. 1
+                    spamwriter.writerow(rij)
             with open(f'hypothese{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
                 for k in range(1,9):
                     spamwriter.writerow(out[k])
-
 if __name__ == "__main__":
     get_output("DPGA",f,SIGMA2)
