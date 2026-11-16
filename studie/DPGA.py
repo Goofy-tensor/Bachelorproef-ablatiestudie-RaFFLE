@@ -85,4 +85,5 @@ def get_output(DPG,fun,S):
                 for k in range(1,9):
                     spamwriter.writerow(out[k])
 
-get_output("DPGA",f,SIGMA2)
+if __name__ == "__main__":
+    get_output("DPGA",f,SIGMA2)
