@@ -79,7 +79,7 @@ def get_output(DPG,fun,S):
             with open(f'data{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
                 relative_R2(out[0])
-                for j in range(9):
+                for j in range(13):
                     spamwriter.writerow(out[0][j,])
             with open(f'hypothese{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
