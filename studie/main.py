@@ -108,10 +108,10 @@ def iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y):
     for i in range(30):
         matrix = alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y) #dim = (13,9)
         alpha = [0.0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1.0]
-        rs_trainMSE[i] = stats.spearmanr(alpha,matrix[6,]) #of rij 4 als je voor forest wilt
+        rs_trainMSE[i] = stats.spearmanr(alpha,matrix[6,]).statistic #of rij 4 als je voor forest wilt
         G = matrix[5,:] - matrix[4,:] #generalisatiegat per alpha (voor forestMSEs)
-        rs_G[i] = stats.spearmanr(alpha,G)
-        rs_rho[i] = stats.spearmanr(alpha,matrix[11,:]) #geeft zo onderlijningen omdat het int verwahct maar in voorbeelden in de documentatie
+        rs_G[i] = stats.spearmanr(alpha,G).statistic
+        rs_rho[i] = stats.spearmanr(alpha,matrix[11,:]).statistic #geeft zo onderlijningen omdat het int verwahct maar in voorbeelden in de documentatie
 
         pos_minMSE_forest = np.argmin(matrix[5,:]) #over testwaarden
         pos_minMSE_boom = np.argmin(matrix[7, :])
