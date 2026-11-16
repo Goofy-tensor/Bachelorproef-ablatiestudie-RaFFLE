@@ -71,16 +71,17 @@ def relative_R2(M):#delen door de waarde bij alpha=0.5 om te vergelijken
     return M
 
 def get_output(DPG,fun,S):
+    SNR = [1,3,10] #zelfde volgorde als in estimate_sigma
     for N in [250,1000,4000]:
         for i in range(3):#aanpassen i naar RNS
             X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = generate_data(fun, N, S[i])
             out = iterate_predictions(X_trainA, X_testA, train_ruis_yA, test_ruis_yA, test_yA)
-            with open(f'data{DPG}{N}-{i}.csv', 'w+', newline='') as csvfile:
+            with open(f'data{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
                 relative_R2(out[0])
                 for j in range(9):
                     spamwriter.writerow(out[0][j,])
-            with open(f'hypothese{DPG}{N}-{i}.csv', 'w+', newline='') as csvfile:
+            with open(f'hypothese{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
                 for k in range(1,9):
                     spamwriter.writerow(out[k])

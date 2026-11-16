@@ -7,7 +7,8 @@ def plot(DPG):
     res_pvalues = np.zeros((9,9))
     for j in range(3):
         for i in range(3): #i aanpassen naar de SNR
-            matrix = np.genfromtxt(f'hypothese{DPG}{N[j]}-{i}.csv', delimiter=',')
+            SNR = [1,3,10]
+            matrix = np.genfromtxt(f'hypothese{DPG}{N[j]}-{SNR[i]}.csv', delimiter=',')
 
             res_pvalues[0][3*j + i] = stats.wilcoxon(matrix[:,0],alternative="two-sided") #rs_trainMSE
             #telling omkeringen tussen opeenvolgende roosterpunten, wat betekent dit exact?

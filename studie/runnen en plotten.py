@@ -25,7 +25,8 @@ def plot(DPG):
     N = [250,1000,4000]
     for j in range(3):
         for i in range(3):
-            matrix = np.genfromtxt(f'data{DPG}{N[j]}-{i}.csv', delimiter=',')
+            SNR = [1,3,10]
+            matrix = np.genfromtxt(f'data{DPG}{N[j]}-{SNR[i]}.csv', delimiter=',')
             trainMSE = matrix[:,4]
             testMSE =matrix[:,5]
             trainMSE_boom =matrix[:,6]
