@@ -63,9 +63,9 @@ SIGMA2 = estimate_sigma(mean,cov,f)
 def relative_R2(M):#delen door de waarde bij alpha=0.5 om te vergelijken
     for i in [0,1,2,3]:
         if M[i,6] > 0:
-            M[:,i] = M[:,i]/M[6,i]
+            M[i,:] = M[i,:]/M[i,6]
         else:
-            M[:,i] = np.zeros(0)
+            M[i,:] = np.zeros(M.shape[1])
             #deze rij beschouwen we dan als niet relevant, oi mss best door max delen dan
             #want mss is er dan een waarde die wel positief is dus dan kan je wel nog een relevante conclusie trekken
     return M
