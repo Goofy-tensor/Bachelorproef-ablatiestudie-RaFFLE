@@ -27,10 +27,10 @@ def plot(DPG):
         for i in range(3):
             SNR = [1,3,10]
             matrix = np.genfromtxt(f'data{DPG}{N[j]}-{SNR[i]}.csv', delimiter=',')
-            trainMSE = matrix[:,4]
-            testMSE =matrix[:,5]
-            trainMSE_boom =matrix[:,6]
-            testMSE_boom =matrix[:,7]
+            trainMSE = matrix[4,]
+            testMSE = matrix[5,]
+            trainMSE_boom = matrix[6,]
+            testMSE_boom = matrix[7,]
             z = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
             plt.figure(3*j+i)

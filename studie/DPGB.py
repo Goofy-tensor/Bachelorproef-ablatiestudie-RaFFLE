@@ -1,6 +1,5 @@
 import numpy as np
 from DPGA import get_output
-np.random.seed(42)
 #stuksgewijs lineair signaal met sprongen en interacties. Met p = 10 en
 #X ∼U[−1,1]p onafhankelijk nemen we
 #f_B(x) = (2x2 +1)⊮{x1 ≤ 0}+(−1,5x2 −1)⊮{x1 > 0}+2x3⊮{x4 > 0,5}+x5.
@@ -25,17 +24,18 @@ def estimate_sigma(functie):
         sigma_squared[i] = np.var(fun) / SNR[i]
     return sigma_squared
 
-def generate_data(functie,N,sigma_squared):
-    X_train, train_y, train_ruis_y = data(functie,N,sigma_squared)
-    X_test, test_y, test_ruis_y = data(functie,10000,sigma_squared)
+def generate_data(functie,N,sigma_squared,i):
+    rng_train = np.random.default_rng([i, 0])
+    rng_test  = np.random.default_rng([i, 1])
+    X_train, train_y, train_ruis_y = data(functie,N,sigma_squared,rng_train)
+    X_test, test_y, test_ruis_y = data(functie,10000,sigma_squared,rng_test)
     return X_train, train_y, train_ruis_y, X_test, test_y, test_ruis_y
 
-def data(functie,n,sigma_squared):
-    X = np.random.uniform(-1, 1, size=(n,10))
+def data(functie,n,sigma_squared,rng):
+    X = rng.uniform(-1, 1, size=(n,10))
     fun = np.apply_along_axis(functie, 1, X)
-    ruis = np.random.normal(loc=0, scale=np.sqrt(sigma_squared), size=n)
-    fun_ruis = fun + ruis
-    return X,fun, fun_ruis
+    ruis = rng.normal(loc=0, scale=np.sqrt(sigma_squared), size=n)
+    return X, fun, fun + ruis
 
 SIGMA2 = estimate_sigma(f)
 if __name__ == "__main__":

@@ -90,21 +90,22 @@ def summary(model):
     return np.average(max_depth), np.average(max_model_depth)
 
 
-def iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y,DPG,N,S):
+def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
     info = np.zeros((13,9)) #30 want we doen per type 30 predictions
     rs_trainMSE = np.zeros(30) #gem over boom
     rs_G = np.zeros(30) #nu gat enkel voor forest
     rs_rho = np.zeros(30)
-    minMSE_0 = np.zeros(30) #laagste MSE waarde vergeleken met die bij alpha = 0
-    minMSE_1 = np.zeros(30)
+    minMSE_half = np.zeros(30) #laagste MSE waarde vergeleken met die bij alpha = 0.5
     versch_ambigu = np.zeros(30) #verschil in ambiguiteit
     opt_alpha_boom = np.zeros(30)
     opt_alpha_forest = np.zeros(30)
     c = np.zeros(30)
+    min_inwendig = np.zeros(30)
     #node_types = np.zeros((4,30))  # 4 modellen [CON,PCON,LIN,PLIN]
     for i in range(30):
+        train_X, train_y, train_ruis_y, test_X, test_y, test_ruis_y = fun2(fun1, N, SIGMA,i)
         matrix = alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,i) #dim = (13,9)
-        with open(f'data_per_iteratie{DPG}{N}-{S}{i}.csv', 'w+', newline='') as csvfile:
+        with open(f'data_per_iteratie{DPG}{N}-{SNR}-{i}.csv', 'w+', newline='') as csvfile:
             spamwriter = csv.writer(csvfile)
             for j in range(13):
                 spamwriter.writerow(matrix[j,])
@@ -121,14 +122,21 @@ def iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y,DPG,N,S):
         opt_alpha_forest[i] = alpha[pos_minMSE_forest]
 
         minMSE = matrix[5,pos_minMSE_forest]
-        minMSE_0[i] = matrix[5,0] - minMSE
-        minMSE_1[i] = matrix[5,-1] - minMSE
+        minMSE_half[i] = matrix[5,6] - minMSE
         versch_ambigu[i] = matrix[-1,0] - matrix[-1,-1]
         p = np.polyfit([1,2,3,4,5,6,7,8,9],matrix[5,:],2)
-        c[i] = p[-1]
+        c[i] = p[0]
+        min_inwendig[i] = in_min(p)
 
         info += matrix
-    return info/30, rs_trainMSE, rs_G, rs_rho, minMSE_0, minMSE_1, versch_ambigu, opt_alpha_forest - opt_alpha_boom, c
+    return info/30, rs_trainMSE, rs_G, rs_rho, minMSE_half, versch_ambigu, opt_alpha_forest - opt_alpha_boom, c, min_inwendig
+
+
+def in_min(p):#lig het min van de kwadratische fit, -b/(2c) tussen alhpa = 0,resp 1
+    if -p[1]/(2*p[0]) < p.dot([1,1,1]) and -p[1]/(2*p[0]) < p.dot([9**2,9,1]):
+        return 1
+    else:
+        return 0
 
 #Nagaan welke modellen er gebruikt worden
 def totaltypes(model): #ik denk dat dit niet zo efficiënt is

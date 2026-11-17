@@ -1,7 +1,6 @@
 import numpy as np
 from main import iterate_predictions
 import csv
-np.random.seed(42)
 #Y = f(X) + eps
 #eps uit normale verdeling
 
@@ -44,17 +43,18 @@ def estimate_sigma(mean,cov,functie):
         sigma_squared[i] = np.var(fun)/SNR[i]
     return sigma_squared
 
-def generate_data(functie,N,sigma_squared):
-    X_train, train_y, train_ruis_y = data(mean,cov,functie,N,sigma_squared)
-    X_test, test_y, test_ruis_y = data(mean,cov,functie,10000,sigma_squared)
+def generate_data(functie,N,sigma_squared,i):
+    rng_train = np.random.default_rng([i, 0])   # aparte, reproduceerbare stromen
+    rng_test  = np.random.default_rng([i, 1])
+    X_train, train_y, train_ruis_y = data(mean,cov,functie,N,sigma_squared,rng_train)
+    X_test, test_y, test_ruis_y = data(mean,cov,functie,10000,sigma_squared,rng_test)
     return X_train, train_y, train_ruis_y, X_test, test_y, test_ruis_y
 
-def data(mean,cov,functie,n,sigma_squared):
-    X = np.random.multivariate_normal(mean, cov, size=n)
+def data(mean,cov,functie,n,sigma_squared,rng):
+    X = rng.multivariate_normal(mean, cov, size=n)
     fun = np.apply_along_axis(functie, 1, X)
-    ruis = np.random.normal(loc=0, scale=np.sqrt(sigma_squared), size=n)
-    fun_ruis = fun + ruis
-    return X,fun, fun_ruis
+    ruis = rng.normal(loc=0, scale=np.sqrt(sigma_squared), size=n)
+    return X, fun, fun + ruis
 
 mean = np.zeros(10)
 cov = covariantie(10)
@@ -76,8 +76,7 @@ def get_output(DPG,fun1,fun2,S):
     SNR = [1,3,10] #zelfde volgorde als in estimate_sigma
     for N in [250,1000,4000]:
         for i in range(3):#aanpassen i naar RNS
-            X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = fun2(fun1, N, S[i])
-            out = iterate_predictions(X_trainA, X_testA, train_ruis_yA, test_ruis_yA, test_yA,DPG,N,S[i])
+            out = iterate_predictions(fun1,fun2,S[i],DPG,N,SNR[i])
             with open(f'data{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
                 for j in range(13):#alle 13 rijen, absolute waarden (was range(9) en gedeeld door alpha=0.5)
