@@ -72,12 +72,12 @@ def relatieve_mse(M):#delen door de waarde bij alpha=0.5 om te vergelijken
     #(enkel nog relevant bij R2: gebruik daar np.nan in plaats van 0, zodat het zichtbaar blijft)
     return t_05, t_1
 
-def get_output(DPG,fun,S):
+def get_output(DPG,fun1,fun2,S):
     SNR = [1,3,10] #zelfde volgorde als in estimate_sigma
     for N in [250,1000,4000]:
         for i in range(3):#aanpassen i naar RNS
-            X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = generate_data(fun, N, S[i])
-            out = iterate_predictions(X_trainA, X_testA, train_ruis_yA, test_ruis_yA, test_yA)
+            X_trainA, train_yA, train_ruis_yA, X_testA, test_yA, test_ruis_yA = fun2(fun1, N, S[i])
+            out = iterate_predictions(X_trainA, X_testA, train_ruis_yA, test_ruis_yA, test_yA,DPG,N,S[i])
             with open(f'data{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
                 for j in range(13):#alle 13 rijen, absolute waarden (was range(9) en gedeeld door alpha=0.5)
@@ -91,5 +91,7 @@ def get_output(DPG,fun,S):
                 spamwriter = csv.writer(csvfile)
                 for k in range(1,9):
                     spamwriter.writerow(out[k])
+    return
+
 if __name__ == "__main__":
-    get_output("DPGA",f,SIGMA2)
+    get_output("DPGA",f,generate_data,SIGMA2)

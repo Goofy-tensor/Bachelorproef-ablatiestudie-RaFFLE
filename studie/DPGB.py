@@ -1,6 +1,4 @@
 import numpy as np
-from main import alpha_prediction
-import csv
 from DPGA import get_output
 np.random.seed(42)
 #stuksgewijs lineair signaal met sprongen en interacties. Met p = 10 en
@@ -40,5 +38,5 @@ def data(functie,n,sigma_squared):
     return X,fun, fun_ruis
 
 SIGMA2 = estimate_sigma(f)
-
-get_output("DPGB",f,SIGMA2)
+if __name__ == "__main__":
+    get_output("DPGB",f,generate_data,SIGMA2)

@@ -1,6 +1,4 @@
-from main import alpha_prediction
 import numpy as np
-import csv
 from DPGA import get_output
 np.random.seed(42)
 #f(x) = 10sin(πx1x2)+20(x3−0,5)^2+10x4+5x5
@@ -36,5 +34,5 @@ def data(functie,n,sigma_squared):
     return X,fun, fun_ruis
 
 SIGMA2 = estimate_sigma(f)
-
-get_output("DPGC",f,SIGMA2)
+if __name__ == "__main__":
+    get_output("DPGC",f,generate_data,SIGMA2)

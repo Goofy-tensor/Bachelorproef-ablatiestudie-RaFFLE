@@ -44,4 +44,7 @@ def plot(DPG):
             plt.legend(loc='best', fontsize=10)
             plt.show()
     return
-plot('DPGA')
+if __name__ == "__main__":
+    plot('DPGA')
+    plot('DPGB')
+    plot('DPGC')

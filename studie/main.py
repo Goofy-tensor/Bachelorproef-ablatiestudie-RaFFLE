@@ -1,11 +1,8 @@
 from pilot import RaFFLE, DEFAULT_DF_SETTINGS
-import pandas as pd
 from sklearn.metrics import r2_score,mean_squared_error
 import numpy as np
-from time import perf_counter
-import matplotlib.pyplot as plt
 from scipy import stats
-
+import csv
 
 #Met model.predict(X, individual=True) krijg je de voorspelling van elke boom apart => in matrix
 #dus fout per boom, forestfout en correlatie uit één fit
@@ -13,7 +10,7 @@ from scipy import stats
 
 
 #Raffle model fitten
-def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k = 42,alpha=1):#n is op hoeveel delen van de dataset je test (eig gwn hoeveel keer)
+def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k=42,alpha=1):#n is op hoeveel delen van de dataset je test (eig gwn hoeveel keer)
     #model maken
     df = {k: 1 + alpha * (v - 1) for k, v in DEFAULT_DF_SETTINGS.items()}
     #Vraag promotor: Wat doet dit juist? dacht dat je gwn alpha kon ingeven of is alphe wat erbij je BIC komt?
@@ -22,7 +19,7 @@ def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k = 42,alph
     #start = perf_counter() (geen rekentijd)
 
     #zet hieronder nog alle parameters expliciet (zie effe RaFFLE paper)
-    model = RaFFLE(n_estimators=100,random_state=k,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df) #n_features_node = 1 net zoals in dRaFFLE van paper
+    model = RaFFLE(n_estimators=100,random_state=k,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df,max_depth=20,max_model_depth=100,min_sample_fit=10,min_sample_alpha=5,min_sample_leaf=5) #n_features_node = 1 net zoals in dRaFFLE van paper
     model.fit(train_X, train_ruis_y)
 
     #end = perf_counter()
@@ -93,7 +90,7 @@ def summary(model):
     return np.average(max_depth), np.average(max_model_depth)
 
 
-def iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y):
+def iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y,DPG,N,S):
     info = np.zeros((13,9)) #30 want we doen per type 30 predictions
     rs_trainMSE = np.zeros(30) #gem over boom
     rs_G = np.zeros(30) #nu gat enkel voor forest
@@ -106,7 +103,12 @@ def iterate_predictions(train_X,test_X,train_ruis_y,test_ruis_y,test_y):
     c = np.zeros(30)
     #node_types = np.zeros((4,30))  # 4 modellen [CON,PCON,LIN,PLIN]
     for i in range(30):
-        matrix = alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y) #dim = (13,9)
+        matrix = alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,i) #dim = (13,9)
+        with open(f'data_per_iteratie{DPG}{N}-{S}{i}.csv', 'w+', newline='') as csvfile:
+            spamwriter = csv.writer(csvfile)
+            for j in range(13):
+                spamwriter.writerow(matrix[j,])
+
         alpha = [0.0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1.0]
         rs_trainMSE[i] = stats.spearmanr(alpha,matrix[6,]).statistic #of rij 4 als je voor forest wilt
         G = matrix[5,:] - matrix[4,:] #generalisatiegat per alpha (voor forestMSEs)
@@ -144,14 +146,9 @@ def totaltypes(model): #ik denk dat dit niet zo efficiënt is
     return types
 
 #Echte predictions
-def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y):
+def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k):
     alpha_results = np.zeros((13,9))
     #alpha_nodes = np.zeros((4,9))
     for i,alpha in enumerate([0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1]): #0; 0,01; 0,05; 0,1; 0,2; 0,35; 0,5; 0,75; 1
-        alpha_results[0,i], alpha_results[1,i], alpha_results[2,i], alpha_results[3,i],alpha_results[4,i], alpha_results[5,i], alpha_results[6,i], alpha_results[7,i], alpha_results[8,i], alpha_results[9,i], alpha_results[10,i], alpha_results[11,i], alpha_results[12,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k=42,alpha=alpha)
+        alpha_results[0,i], alpha_results[1,i], alpha_results[2,i], alpha_results[3,i],alpha_results[4,i], alpha_results[5,i], alpha_results[6,i], alpha_results[7,i], alpha_results[8,i], alpha_results[9,i], alpha_results[10,i], alpha_results[11,i], alpha_results[12,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k,alpha=alpha)
     return alpha_results #matrix met kolommen de alpha waarden en rijen de eigenschappen
-
-
-
-
-
