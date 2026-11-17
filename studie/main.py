@@ -133,7 +133,7 @@ def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
 
 
 def in_min(p):#lig het min van de kwadratische fit, -b/(2c) tussen alhpa = 0,resp 1
-    if -p[1]/(2*p[0]) < p.dot([1,1,1]) and -p[1]/(2*p[0]) < p.dot([9**2,9,1]):
+    if -p[1]/(2*p[0]) < p.dot([1,1,1]) and -p[1]/(2*p[0]) < p.dot([9**2,9,1]) and p[0] > 0: #p[0] = c, p[1] = b, p[2] = a
         return 1
     else:
         return 0

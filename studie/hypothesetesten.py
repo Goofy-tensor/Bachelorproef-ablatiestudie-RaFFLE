@@ -27,7 +27,7 @@ def bereken_pwaarden(DPG):
             aantal_alpha[3*j + i] = aantal(matrix[6,])
 
             res_pvalues[6][3 * j + i] = stats.wilcoxon(matrix[6,], alternative="greater").pvalue #c
-            res_pvalues[7][3 * j + i] = stats.wilcoxon(matrix[6,], alternative="two-sides").pvalue #min_inwendig
+            res_pvalues[7][3 * j + i] = stats.wilcoxon(matrix[6,], alternative="two-sided").pvalue #min_inwendig
             #p-waarde voor nulhypothse: ligt niet in het inwendige, min_inwendig geeft 0 als niet in inwendege en anders 1
             #dit is dus eig enkel relevant voor waarden waar c pos
     with open(f'p_waarden{DPG}.csv', 'w+', newline='') as csvfile:
