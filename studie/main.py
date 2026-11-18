@@ -126,14 +126,14 @@ def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
         versch_ambigu[i] = matrix[-1,0] - matrix[-1,-1]
         p = np.polyfit([1,2,3,4,5,6,7,8,9],matrix[5,:],2)
         c[i] = p[0]
-        min_inwendig[i] = in_min(p)
+        min_inwendig[i] = in_min(p,matrix[5,0],matrix[5,-1])
 
         info += matrix
     return info/30, rs_trainMSE, rs_G, rs_rho, minMSE_half, versch_ambigu, opt_alpha_forest - opt_alpha_boom, c, min_inwendig
 
 
-def in_min(p):#lig het min van de kwadratische fit, -b/(2c) tussen alhpa = 0,resp 1
-    if -p[1]/(2*p[0]) < p.dot([1,1,1]) and -p[1]/(2*p[0]) < p.dot([9**2,9,1]) and p[0] > 0: #p[0] = c, p[1] = b, p[2] = a
+def in_min(p,MSE_0,MSE_1):#lig het min van de kwadratische fit, -b/(2c) tussen alhpa = 0,resp 1
+    if -p[1]/(2*p[0]) < MSE_0 and -p[1]/(2*p[0]) < MSE_1 and p[0] > 0: #p[0] = c, p[1] = b, p[2] = a
         return 1
     else:
         return 0
