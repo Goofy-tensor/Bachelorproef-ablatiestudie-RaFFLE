@@ -1,62 +1,69 @@
 import numpy as np
 from scipy import stats
 import csv
+from statsmodels.stats import multitest
 
 def bereken_pwaarden(DPG):
     N = [250,1000,4000]
-    res_pvalues = np.zeros((8,9))
-    betrouwbaarheidsinterval = np.zeros((9,2)) #bootstrapbetrouwbaarheidsintervallen van versch in opt_alpha
+    res_pvalues = np.zeros((7,9))
     aantal_alpha = np.zeros((9,3)) #aantal pos,neg,en nulwaardes meedelen van het versch in opt_alpha
-
+    rel_aantal_min_inwendig = np.zeros(9)
     for j in range(3):
         for i in range(3): #i aanpassen naar de SNR
             SNR = [1,3,10]
             matrix = np.genfromtxt(f'hypothese{DPG}{N[j]}-{SNR[i]}.csv', delimiter=',') # shape: (8,30)
 
-            res_pvalues[0][3*j + i] = stats.wilcoxon(matrix[0,],alternative="greater").pvalue #rs_trainMSE
-            res_pvalues[1][3 * j + i] = stats.wilcoxon(matrix[1,], alternative="less").pvalue #rs_G
-            res_pvalues[2][3 * j + i] = stats.wilcoxon(matrix[2,], alternative="two-sided").pvalue #rs_rho
-            res_pvalues[3][3 * j + i] = stats.wilcoxon(matrix[3,], alternative="two-sided").pvalue #minMSE_half
-            res_pvalues[4][3 * j + i] = stats.wilcoxon(matrix[4,], alternative="two-sided").pvalue #versch_ambigu
+            res_pvalues[0][3*j + i] = stats.wilcoxon(matrix[0,],alternative="greater", nan_policy="omit").pvalue #rs_trainMSE
+            res_pvalues[1][3 * j + i] = stats.wilcoxon(matrix[1,], alternative="less", nan_policy="omit").pvalue #rs_G
+            res_pvalues[2][3 * j + i] = stats.wilcoxon(matrix[2,], alternative="two-sided", nan_policy="omit").pvalue #rs_rho
+            res_pvalues[3][3 * j + i] = stats.wilcoxon(matrix[3,], alternative="two-sided", nan_policy="omit").pvalue #minMSE_half
+            res_pvalues[4][3 * j + i] = stats.wilcoxon(matrix[4,], alternative="two-sided", nan_policy="omit").pvalue #versch_ambigu
             #versch = A(0) - A(1). H3b voorspelt +, H3a voorspelt -
-            res_pvalues[5][3 * j + i] = stats.wilcoxon(matrix[5,], alternative="less").pvalue #opt alpha vergelijking
+            res_pvalues[5][3 * j + i] = stats.wilcoxon(matrix[5,], alternative="less", nan_policy="omit").pvalue #opt alpha vergelijking
+            aantal_alpha[3*j + i] = aantal(matrix[5,])
 
-            a = min(matrix[6,])
-            b = max(matrix[6,])
-            betrouwbaarheidsinterval[3*j + i,] = [a+0.025*(b-a),b-0.025*(b-a)]
-            aantal_alpha[3*j + i] = aantal(matrix[6,])
-
-            res_pvalues[6][3 * j + i] = stats.wilcoxon(matrix[6,], alternative="greater").pvalue #c
-            res_pvalues[7][3 * j + i] = stats.wilcoxon(matrix[6,], alternative="two-sided").pvalue #min_inwendig
-            #p-waarde voor nulhypothse: ligt niet in het inwendige, min_inwendig geeft 0 als niet in inwendege en anders 1
-            #dit is dus eig enkel relevant voor waarden waar c pos
+            res_pvalues[6][3 * j + i] = stats.wilcoxon(matrix[6,], alternative="greater", nan_policy="omit").pvalue #c
+            rel_aantal_min_inwendig = sum(matrix[7,])/len(matrix[7,]) #hoeveel keer min inwendig is (en c > 0)
     with open(f'p_waarden{DPG}.csv', 'w+', newline='') as csvfile:
         spamwriter = csv.writer(csvfile)
-        for k in range(8):
+        for k in range(7):
             spamwriter.writerow(res_pvalues[k,])
-    with open(f'betrouwbaarheidsintervallen{DPG}.csv', 'w+', newline='') as csvfile:
+    with open(f'relatief_aantal_min_inwendig{DPG}.csv', 'w+', newline='') as csvfile:
         spamwriter = csv.writer(csvfile)
-        for l in range(9):
-            spamwriter.writerow(betrouwbaarheidsinterval[l,])
+        spamwriter.writerow(rel_aantal_min_inwendig)
     with open(f'aantal_alpha{DPG}.csv', 'w+', newline='') as csvfile:
         spamwriter = csv.writer(csvfile)
         for m in range(9):
             spamwriter.writerow(aantal_alpha[m,])
     return res_pvalues
 
-def holmcorrectie(pvalues):
+def holmcorrectie(DPG,pvalues):
     #pwaarden v.d. verschillende hypothesen sorteren en vergelijken met drempelwaarde p_i <= 0,05/(m-i+), m = tot hypothesen
-    sorted_pvalues = np.sort(pvalues) #klein naar groot per rij
-    vgl_grens = np.zeros((8,9)) #elke p-waarde vergelijken met de grens uit de Holm methode
-    pos = np.zeros(8) #pos van eerste niet verworpen p-waarde
-    for i in range(9):
-        vgl_grens[:,i] = sorted_pvalues[:,i] - 0.05/(9-i)
-    for j in range(8):
-        pos[j] = positie(vgl_grens[j,])
-    return pos,sorted_pvalues
+    rejected = np.full((7, 9), np.nan)
+    corrected_pvalues = np.full((7, 9), np.nan)
+    for i in range(7):
+        rij = pvalues[i,]
+        geldig = ~np.isnan(rij)  # True waar er een echte p-waarde staat
+
+        if geldig.sum() != 0:
+            rej, corr, _, _ = multitest.multipletests(rij[geldig], method="holm")
+            rejected[i, geldig] = rej
+            corrected_pvalues[i, geldig] = corr
+
+    with open(f'verworpen_hypotheses{DPG}.csv', 'w+', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile)
+        for m in range(7):
+            spamwriter.writerow(rejected[m,])
+    with open(f'aangepaste_pwaarden{DPG}.csv', 'w+', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile)
+        for l in range(7):
+            spamwriter.writerow(corrected_pvalues[l,])
+    return rejected, corrected_pvalues
 
 def positie(l):
     for i in range(len(l)):
+        if np.isnan(l[i]):
+            return i
         if l[i] > 0:
             return i
     return -1
@@ -72,20 +79,7 @@ def aantal(l):
             res[2] += 1
     return res
 
-def verworpen_hypotheses(DPG,pvalues):
-    pos,sorted_pvalues = holmcorrectie(pvalues)
-    verworpen = np.ones((8,9))
-    for i,j in enumerate(pos):
-        if j != -1:
-           for k in range(int(j),9):
-               verworpen[i,np.where(pvalues[i] == sorted_pvalues[i,k])[0][0]] = 0
-    with open(f'verworpen_hypotheses{DPG}.csv', 'w+', newline='') as csvfile:
-        spamwriter = csv.writer(csvfile)
-        for m in range(8):
-            spamwriter.writerow(verworpen[m,])
-    return verworpen #geeft per soort hypothese voor welke SNR en N in het rooster de nulhypothese verworpen werd
-
 
 if __name__ == "__main__":
-    pvalues = bereken_pwaarden("DPGA")
-    verworpen = verworpen_hypotheses("DPGA",pvalues)
+    pvaluesA = bereken_pwaarden("DPGA")
+    verworpen = holmcorrectie("DPGA",pvaluesA)
