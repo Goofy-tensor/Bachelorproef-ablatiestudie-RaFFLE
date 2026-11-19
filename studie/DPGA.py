@@ -34,10 +34,11 @@ def covariantie(N):
                 M[i,j] = 1/2
     return M + M.T
 
-def estimate_sigma(mean,cov,functie):
+def estimate_sigma(m,c,functie):
+    np.random.seed(42) #zodat je meerdere keren dezelfde sigma_squared krijgt
     SNR = [1,3,10]
     sigma_squared = np.zeros(3)
-    X = np.random.multivariate_normal(mean, cov, size=10**6) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
+    X = np.random.multivariate_normal(m, c, size=10**6) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
     fun = np.apply_along_axis(functie, 1, X)# axis 0 = volgens kolommen, 1 volgens rijen
     for i in range(3):
         sigma_squared[i] = np.var(fun)/SNR[i]
@@ -50,15 +51,14 @@ def generate_data(functie,N,sigma_squared,i):
     X_test, test_y, test_ruis_y = data(mean,cov,functie,10000,sigma_squared,rng_test)
     return X_train, train_y, train_ruis_y, X_test, test_y, test_ruis_y
 
-def data(mean,cov,functie,n,sigma_squared,rng):
-    X = rng.multivariate_normal(mean, cov, size=n)
+def data(m,c,functie,n,sigma_squared,rng):
+    X = rng.multivariate_normal(m, c, size=n)
     fun = np.apply_along_axis(functie, 1, X)
     ruis = rng.normal(loc=0, scale=np.sqrt(sigma_squared), size=n)
     return X, fun, fun + ruis
 
 mean = np.zeros(10)
 cov = covariantie(10)
-SIGMA2 = estimate_sigma(mean,cov,f)
 
 def relatieve_mse(M):#delen door de waarde bij alpha=0.5 om te vergelijken
     #M is de (13,9) matrix, de MSE's zitten in rijen 4 t/m 7 (train/test forest, train/test boom)
@@ -67,8 +67,6 @@ def relatieve_mse(M):#delen door de waarde bij alpha=0.5 om te vergelijken
     t_05 = (mse - mse[:,[6]])/mse[:,[6]]#relatieve verandering t.o.v. alpha = 0.5
     t_1 = (mse - mse[:,[8]])/mse[:,[8]]#relatieve verandering t.o.v. alpha = 1 (standaard PILOT)
     #MSE is altijd > 0 (er is ruis), dus geen if nodig
-    #deze rij beschouwen we dan als niet relevant, oi mss best door max delen dan
-    #want mss is er dan een waarde die wel positief is dus dan kan je wel nog een relevante conclusie trekken
     #(enkel nog relevant bij R2: gebruik daar np.nan in plaats van 0, zodat het zichtbaar blijft)
     return t_05, t_1
 
@@ -88,9 +86,10 @@ def get_output(DPG,fun1,fun2,S):
                     spamwriter.writerow(rij)
             with open(f'hypothese{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
-                for k in range(1,9):
+                for k in range(1,11):
                     spamwriter.writerow(out[k])
     return
 
 if __name__ == "__main__":
+    SIGMA2 = estimate_sigma(mean, cov, f)
     get_output("DPGA",f,generate_data,SIGMA2)

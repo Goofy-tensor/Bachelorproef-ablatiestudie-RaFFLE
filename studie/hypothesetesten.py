@@ -3,39 +3,88 @@ from scipy import stats
 import csv
 from statsmodels.stats import multitest
 
-def bereken_pwaarden(DPG):
+def bereken_pwaarden(DPG): #weeer alle indices aanpassen want weer extra waarde bijgekomen
     N = [250,1000,4000]
-    res_pvalues = np.zeros((7,9))
-    aantal_alpha = np.zeros((9,3)) #aantal pos,neg,en nulwaardes meedelen van het versch in opt_alpha
-    rel_aantal_min_inwendig = np.zeros(9)
+    res_pvalues = np.zeros((9,9))
+    aantal_trainMSE = np.zeros((9, 4))  # aantal nan,pos,neg,en nulwaardes meedelen
+    aantal_G = np.zeros((9, 4))
+    aantal_rho = np.zeros((9, 4))
+
+    med_trainMSE = np.zeros(9)
+    med_G = np.zeros(9)
+    med_rho = np.zeros(9)
+
+    aantal_alpha = np.zeros((9,4))
+    aantal_min_inwendig_forest = np.zeros((2,9)) #1e rij aantal min in inwendige => Uvorm, 2e rij is aantal monotoom
+    aantal_min_inwendig_boom = np.zeros((2, 9))  # 1e rij aantal min in inwendige => Uvorm, 2e rij is aantal monotoom
+    omkeringen = np.zeros((2,9))#1e rij gemiddelde en tweede rij max
     for j in range(3):
         for i in range(3): #i aanpassen naar de SNR
             SNR = [1,3,10]
             matrix = np.genfromtxt(f'hypothese{DPG}{N[j]}-{SNR[i]}.csv', delimiter=',') # shape: (8,30)
 
-            res_pvalues[0][3*j + i] = stats.wilcoxon(matrix[0,],alternative="greater", nan_policy="omit").pvalue #rs_trainMSE
-            res_pvalues[1][3 * j + i] = stats.wilcoxon(matrix[1,], alternative="less", nan_policy="omit").pvalue #rs_G
-            res_pvalues[2][3 * j + i] = stats.wilcoxon(matrix[2,], alternative="two-sided", nan_policy="omit").pvalue #rs_rho
-            res_pvalues[3][3 * j + i] = stats.wilcoxon(matrix[3,], alternative="two-sided", nan_policy="omit").pvalue #minMSE_half
-            res_pvalues[4][3 * j + i] = stats.wilcoxon(matrix[4,], alternative="two-sided", nan_policy="omit").pvalue #versch_ambigu
-            #versch = A(0) - A(1). H3b voorspelt +, H3a voorspelt -
-            res_pvalues[5][3 * j + i] = stats.wilcoxon(matrix[5,], alternative="less", nan_policy="omit").pvalue #opt alpha vergelijking
-            aantal_alpha[3*j + i] = aantal(matrix[5,])
+            res_pvalues[0][3*j + i] = safe_wilcoxon(matrix[0,],"greater") #rs_trainMSE
+            omkeringen[0][3 * j + i] = np.average(matrix[1,])
+            omkeringen[1][3 * j + i] = max(matrix[1,])
+            med_trainMSE[3*j + i], aantal_trainMSE[3*j + i,] = effectgroottes(matrix[0,])
 
-            res_pvalues[6][3 * j + i] = stats.wilcoxon(matrix[6,], alternative="greater", nan_policy="omit").pvalue #c
-            rel_aantal_min_inwendig = sum(matrix[7,])/len(matrix[7,]) #hoeveel keer min inwendig is (en c > 0)
-    with open(f'p_waarden{DPG}.csv', 'w+', newline='') as csvfile:
-        spamwriter = csv.writer(csvfile)
-        for k in range(7):
-            spamwriter.writerow(res_pvalues[k,])
-    with open(f'relatief_aantal_min_inwendig{DPG}.csv', 'w+', newline='') as csvfile:
-        spamwriter = csv.writer(csvfile)
-        spamwriter.writerow(rel_aantal_min_inwendig)
-    with open(f'aantal_alpha{DPG}.csv', 'w+', newline='') as csvfile:
-        spamwriter = csv.writer(csvfile)
-        for m in range(9):
-            spamwriter.writerow(aantal_alpha[m,])
+
+            res_pvalues[1][3 * j + i] = safe_wilcoxon(matrix[2,],"less") #rs_G
+            med_G[3 * j + i], aantal_G[3 * j + i,] = effectgroottes(matrix[2,])
+
+            res_pvalues[2][3 * j + i] = safe_wilcoxon(matrix[3,],"less") #rs_rho
+            med_rho[3 * j + i], aantal_rho[3 * j + i,] = effectgroottes(matrix[3,])
+
+            res_pvalues[3][3 * j + i] = safe_wilcoxon(matrix[4,],"two-sided") #minMSE_half
+
+            res_pvalues[4][3 * j + i] = safe_wilcoxon(matrix[5,],"less") #opt alpha vergelijking
+            aantal_alpha[3*j + i,] = effectgroottes(matrix[5,])[1]
+
+            res_pvalues[5][3 * j + i] = safe_wilcoxon(matrix[6,],"greater") #c_forest
+            aantal_min_inwendig_forest[0][3 * j + i] = np.sum(matrix[7,] == 1)  # hoeveel keer min inwendig is (en c > 0)
+            aantal_min_inwendig_forest[1][3 * j + i] = np.sum(matrix[7,] == 2)  # hoeveel keer monotoom voor c > 0
+
+            res_pvalues[6][3 * j + i] = safe_wilcoxon(matrix[8,],"greater") #c_boom
+            aantal_min_inwendig_boom[0][3 * j + i] = np.sum(matrix[9,] == 1)  # hoeveel keer min inwendig is (en c > 0)
+            aantal_min_inwendig_boom[1][3 * j + i] = np.sum(matrix[9,] == 2)  # hoeveel keer monotoom voor c > 0
+
+            #nog aanpassen
+            res_pvalues[7][3 * j + i] = safe_wilcoxon(matrix[10,], "greater")  #treeMSE_d0
+            res_pvalues[8][3 * j + i] = safe_wilcoxon(matrix[11,], "greater")  #treeMSE_d1
+
+    hulp_write(DPG,"p_waarden",res_pvalues)
+    hulp_write(DPG, "aantal_min_inwendig_forest", aantal_min_inwendig_forest)
+    hulp_write(DPG, "aantal_min_inwendig_boom", aantal_min_inwendig_boom)
+    hulp_write(DPG, "omkeringen", omkeringen)
+    hulp_write(DPG, "aantal_alpha", aantal_alpha)
+    hulp_write(DPG, "aantal_trainMSE", aantal_trainMSE)
+    hulp_write(DPG, "aantal_G", aantal_G)
+    hulp_write(DPG, "aantal_rho", aantal_rho)
+
+    hulp_write(DPG, "med_trainMSE", med_trainMSE)
+    hulp_write(DPG, "med_G", med_G)
+    hulp_write(DPG, "med_rho", med_rho)
     return res_pvalues
+
+def hulp_write(DPG,name,values):
+    with open(f'{name}{DPG}.csv', 'w+', newline='') as csvfile:
+        spamwriter = csv.writer(csvfile)
+        d = len(values[:,0])
+        if d > 1:
+            for m in range(d):
+                spamwriter.writerow(values[m,])
+        else:
+            spamwriter.writerow(values)
+    return
+
+
+def safe_wilcoxon(x,alternative): #als allen nul willen we dat het np.nan terug geeft
+        goed = ~np.isnan(x)  # drop NaNs
+        d = x[goed] #x moet hiervoor een numpy array zijn anders omzetten met np.asarray
+        if d.size == 0 or np.all(d == 0):
+            return np.nan  # als alle res nul of x alleen nan dan np.nan teruggeven
+        else:
+            return stats.wilcoxon(d,alternative=alternative).pvalue
 
 def holmcorrectie(DPG,pvalues):
     #pwaarden v.d. verschillende hypothesen sorteren en vergelijken met drempelwaarde p_i <= 0,05/(m-i+), m = tot hypothesen
@@ -68,18 +117,24 @@ def positie(l):
             return i
     return -1
 
-def aantal(l):
-    res = np.zeros(3)
+def effectgroottes(l):
+    res = np.zeros(4)
     for i in range(len(l)):
-        if l[i] > 0:
+        if np.isnan(l[i]):
             res[0] += 1
-        elif l[i] == 0:
+        elif l[i] > 0:
             res[1] += 1
-        else:
+        elif l[i] == 0:
             res[2] += 1
-    return res
+        else:
+            res[3] += 1
+    return np.nanmedian(l),res
 
 
 if __name__ == "__main__":
     pvaluesA = bereken_pwaarden("DPGA")
-    verworpen = holmcorrectie("DPGA",pvaluesA)
+    holmcorrectie("DPGA",pvaluesA)
+    pvaluesB = bereken_pwaarden("DPGB")
+    holmcorrectie("DPGB", pvaluesB)
+    pvaluesC = bereken_pwaarden("DPGC")
+    holmcorrectie("DPGC", pvaluesC)

@@ -12,6 +12,7 @@ def f(X):
     return 10*np.sin(np.pi*X[0]*X[1]) + 20*(X[2] -0.5)**2 + 10*X[3] + 5*X[4] #x1 = X[0]
 
 def estimate_sigma(functie):
+    np.random.seed(42)  # zodat je meerdere keren dezelfde sigma_squared krijgt
     SNR = [1, 3, 10]
     sigma_squared = np.zeros(3)
     X = np.random.uniform(0, 1, size=(10**6,10)) #Elke rij is 1 prediction (dus 10^6 rijen en len(X) kolommen)
@@ -32,6 +33,8 @@ def data(functie,n,sigma_squared,rng):
     fun = np.apply_along_axis(functie, 1, X)
     ruis = rng.normal(loc=0, scale=np.sqrt(sigma_squared), size=n)
     return X, fun, fun + ruis
-SIGMA2 = estimate_sigma(f)
+
+
 if __name__ == "__main__":
+    SIGMA2 = estimate_sigma(f)
     get_output("DPGC",f,generate_data,SIGMA2)
