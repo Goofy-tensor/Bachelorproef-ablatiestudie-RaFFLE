@@ -66,16 +66,12 @@ def bereken_pwaarden(DPG): #weeer alle indices aanpassen want weer extra waarde 
     hulp_write(DPG, "med_rho", med_rho)
     return res_pvalues
 
-def hulp_write(DPG,name,values):
+def hulp_write(DPG, name, values):
+    values = np.atleast_2d(values)      # 1D (9,) wordt (1,9)
     with open(f'{name}{DPG}.csv', 'w+', newline='') as csvfile:
         spamwriter = csv.writer(csvfile)
-        d = len(values[:,0])
-        if d > 1:
-            for m in range(d):
-                spamwriter.writerow(values[m,])
-        else:
-            spamwriter.writerow(values)
-    return
+        for rij in values:
+            spamwriter.writerow(rij)
 
 
 def safe_wilcoxon(x,alternative): #als allen nul willen we dat het np.nan terug geeft
