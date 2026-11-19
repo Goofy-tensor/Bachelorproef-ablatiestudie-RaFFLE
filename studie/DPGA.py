@@ -1,6 +1,7 @@
 import numpy as np
 from main import iterate_predictions
 import csv
+
 #Y = f(X) + eps
 #eps uit normale verdeling
 
@@ -61,7 +62,7 @@ mean = np.zeros(10)
 cov = covariantie(10)
 
 def relatieve_mse(M):#delen door de waarde bij alpha=0.5 om te vergelijken
-    #M is de (13,9) matrix, de MSE's zitten in rijen 4 t/m 7 (train/test forest, train/test boom)
+    #M is de (14,9) matrix, de MSE's zitten in rijen 4 t/m 7 (train/test forest, train/test boom)
     #niet in-place: M blijft intact, dus de absolute waarden blijven bewaard (nodig voor plots en sigma^2-lijn)
     mse = M[4:8,:]
     t_05 = (mse - mse[:,[6]])/mse[:,[6]]#relatieve verandering t.o.v. alpha = 0.5
@@ -77,7 +78,7 @@ def get_output(DPG,fun1,fun2,S):
             out = iterate_predictions(fun1,fun2,S[i],DPG,N,SNR[i])
             with open(f'data{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
-                for j in range(13):#alle 13 rijen, absolute waarden (was range(9) en gedeeld door alpha=0.5)
+                for j in range(14):#alle 14 rijen (rij 13 = train-MSE boom op eigen bootstrapsample), absolute waarden
                     spamwriter.writerow(out[0][j,])
             with open(f'relatief{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
@@ -86,7 +87,7 @@ def get_output(DPG,fun1,fun2,S):
                     spamwriter.writerow(rij)
             with open(f'hypothese{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
-                for k in range(1,13):
+                for k in range(1,12): #11 rijen hypothese-output (out[1] t/m out[11])
                     spamwriter.writerow(out[k])
     return
 
