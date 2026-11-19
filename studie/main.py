@@ -7,7 +7,11 @@ import csv
 #Met model.predict(X, individual=True) krijg je de voorspelling van elke boom apart => in matrix
 #dus fout per boom, forestfout en correlatie uit één fit
 #model.estimators[m].tree_summary(feature_names=...) geeft per knoop het modeltype, de diepte en de variabele
+#model.estimators_samples_ geeft de bootstrapindices van elke boom (nodig voor de train-MSE op de eigen bootstrapsample)
 
+#Welke rij gebruiken we voor de train-MSE van de boom in de Spearman-toets (H1)?
+#6  = train-MSE op de volledige trainingsset, 13 = train-MSE op de eigen bootstrapsample van elke boom
+TRAIN_BOOM_RIJ = 13
 
 #Raffle model fitten
 def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k=42,alpha=1):
@@ -15,7 +19,8 @@ def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k=42,alpha=
     df = {k: 1 + alpha * (v - 1) for k, v in DEFAULT_DF_SETTINGS.items()}
     df["blin"] = -1
 
-    model = RaFFLE(n_estimators=100,random_state=k,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df,max_depth=20,max_model_depth=100,min_sample_fit=10,min_sample_alpha=5,min_sample_leaf=5)
+    #oob_score=True zodat estimators_samples_ (bootstrapindices per boom) zeker beschikbaar is
+    model = RaFFLE(n_estimators=100,random_state=k,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df,max_depth=20,max_model_depth=100,min_sample_fit=10,min_sample_alpha=5,min_sample_leaf=5,oob_score=True)
     model.fit(train_X, train_ruis_y)
 
     #Waarden die we willen weten
@@ -38,10 +43,12 @@ def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k=42,alpha=
     test_MSE_boom = boom(test_M,test_ruis_y, mean_squared_error)
     foutcorr = foutcorrelatie(test_M,test_y) #we bekijken hier effectieve f(x)
     ambigu = ambiguiteit(test_M,predictions_test)
+    #train-MSE van elke boom op zijn eigen bootstrapsample (de punten die de boom effectief gezien heeft)
+    train_MSE_boom_inbag = boom_inbag(train_M,train_ruis_y,model.estimators_samples_)
 
     #Eigenschappen model
     max_depth, max_model_depth = summary(model)
-    return train_R2,test_R2,train_boom_R2,test_boom_R2,train_MSE,test_MSE,train_MSE_boom,test_MSE_boom ,max_depth, max_model_depth, ruisvrij_error,foutcorr,ambigu
+    return train_R2,test_R2,train_boom_R2,test_boom_R2,train_MSE,test_MSE,train_MSE_boom,test_MSE_boom ,max_depth, max_model_depth, ruisvrij_error,foutcorr,ambigu,train_MSE_boom_inbag
 
 #Eigenschappen van de invividuele bomen
 def boom(M,Y,fun):
@@ -49,6 +56,16 @@ def boom(M,Y,fun):
     for i in range(100):
         pred_X = M[:,i] #elke Xi is een rij dus predictions i-de boom in de i-de kolom
         res[i] = fun(Y, pred_X)
+    return np.average(res)
+
+#MSE van elke boom op zijn eigen bootstrapsample (in-bag), gemiddeld over de bomen
+def boom_inbag(M,Y,samples):
+    res = np.zeros(len(samples))
+    for i, idx in enumerate(samples): #samples[i] = bootstrapindices van boom i (met herhalingen)
+        idx = np.asarray(idx)
+        if idx.dtype == bool: #voor het geval het een masker is in plaats van indices
+            idx = np.where(idx)[0]
+        res[i] = mean_squared_error(Y[idx], M[idx,i]) #herhaalde indices wegen automatisch zwaarder mee
     return np.average(res)
 
 #Foutcorrelatie, hoeveel gelijkaardige fouten de bomen maken
@@ -83,11 +100,11 @@ def summary(model):
 
 
 def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
-    info = np.zeros((13,9)) #13 outputs van RaFFLE_prediction en 9 alpha waarden
+    info = np.zeros((14,9)) #14 outputs van RaFFLE_prediction en 9 alpha waarden
+    alle = np.zeros((30,14,9)) #matrix van elke replicatie bewaren (nodig voor leave-one-out optimum)
     rs_trainMSE = np.zeros(30) #gem over boom
     rs_G = np.zeros(30) #nu gat enkel voor forest
     rs_rho = np.zeros(30)
-    minMSE_half = np.zeros(30) #laagste MSE waarde vergeleken met die bij alpha = 0.5
     opt_alpha_boom = np.zeros(30)
     opt_alpha_forest = np.zeros(30)
     c_forest = np.zeros(30)
@@ -95,21 +112,22 @@ def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
     c_boom = np.zeros(30)
     min_inwendig_boom = np.zeros(30)
     aantal_omkeringen = np.zeros(30)
-    treeMSE_d0 = np.zeros(30) #treeMSE bij alpha=0 - minMSE (gekeken naar de index)
-    treeMSE_d1 = np.zeros(30)
+    treeMSE_d0 = np.zeros(30) #MSE_r(alpha=0) - MSE_r(alpha*_-r), met alpha*_-r bepaald op de overige 29 replicaties
+    treeMSE_d1 = np.zeros(30) #idem maar voor alpha=1
 
+    alpha = [0.0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1.0]
     #node_types = np.zeros((4,30))  # 4 modellen [CON,PCON,LIN,PLIN]
     for i in range(30):
         train_X, train_y, train_ruis_y, test_X, test_y, test_ruis_y = fun2(fun1, N, SIGMA,i)
-        matrix = alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,i) #dim = (13,9)
+        matrix = alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,i) #dim = (14,9)
+        alle[i] = matrix
         with open(f'data_per_iteratie{DPG}{N}-{SNR}-{i}.csv', 'w+', newline='') as csvfile:
             spamwriter = csv.writer(csvfile)
-            for j in range(13):
+            for j in range(14):
                 spamwriter.writerow(matrix[j,])
 
-        alpha = [0.0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1.0]
-        rs_trainMSE[i] = stats.spearmanr(alpha,matrix[6,]).statistic #rij 6 want we bekijken voor boom
-        aantal_omkeringen[i] = omkeringen(matrix[6,])
+        rs_trainMSE[i] = stats.spearmanr(alpha,matrix[TRAIN_BOOM_RIJ,]).statistic #train-MSE boom (rij zie TRAIN_BOOM_RIJ)
+        aantal_omkeringen[i] = omkeringen(matrix[TRAIN_BOOM_RIJ,])
 
         G = matrix[5,:] - matrix[4,:] #generalisatiegat per alpha (voor forestMSEs)
         rs_G[i] = stats.spearmanr(alpha,G).statistic
@@ -121,10 +139,6 @@ def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
         opt_alpha_boom[i] = pos_minMSE_boom
         opt_alpha_forest[i] = pos_minMSE_forest #voor de hypothesetesten gebruiken we de rangindex
 
-        minMSE_forest = matrix[5,pos_minMSE_forest]
-        minMSE_tree = matrix[7,pos_minMSE_boom]
-        minMSE_half[i] = matrix[5,6] - minMSE_forest #6 is rangindex van alpha=0.5
-
         p_forest = np.polyfit([1,2,3,4,5,6,7,8,9],matrix[5,:],2)
         c_forest[i] = p_forest[0]
         min_inwendig_forest[i] = in_min(p_forest)
@@ -133,11 +147,17 @@ def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
         c_boom[i] = p_boom[0]
         min_inwendig_boom[i] = in_min(p_boom)
 
-        treeMSE_d0[i] = matrix[7,0] - minMSE_tree
-        treeMSE_d1[i] = matrix[7,-1] - minMSE_tree
+    #U-vormtoets boom: optimum alpha*_-r bepalen op de overige 29 replicaties (replicatie r zelf telt niet mee)
+    boom_test = alle[:,7,:] #(30,9): test-MSE boom per replicatie en alpha
+    totaal = boom_test.sum(axis=0)
+    for r in range(30):
+        gem_zonder_r = (totaal - boom_test[r])/29 #gemiddelde test-MSE van de overige 29 replicaties
+        k_opt = np.argmin(gem_zonder_r) #rangindex van alpha*_-r
+        treeMSE_d0[r] = boom_test[r,0] - boom_test[r,k_opt]
+        treeMSE_d1[r] = boom_test[r,-1] - boom_test[r,k_opt]
 
-        info += matrix
-    return info/30, rs_trainMSE, aantal_omkeringen, rs_G, rs_rho, minMSE_half, opt_alpha_forest - opt_alpha_boom, c_forest, min_inwendig_forest, c_boom, min_inwendig_boom, treeMSE_d0, treeMSE_d1
+    info = alle.sum(axis=0)
+    return info/30, rs_trainMSE, aantal_omkeringen, rs_G, rs_rho, opt_alpha_forest - opt_alpha_boom, c_forest, min_inwendig_forest, c_boom, min_inwendig_boom, treeMSE_d0, treeMSE_d1
 
 def omkeringen(l):
     count = 0
@@ -172,8 +192,8 @@ def totaltypes(model): #ik denk dat dit niet zo efficiënt is
 
 #Echte predictions
 def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k):
-    alpha_results = np.zeros((13,9))
+    alpha_results = np.zeros((14,9))
     #alpha_nodes = np.zeros((4,9))
     for i,alpha in enumerate([0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1]): #0; 0,01; 0,05; 0,1; 0,2; 0,35; 0,5; 0,75; 1
-        alpha_results[0,i], alpha_results[1,i], alpha_results[2,i], alpha_results[3,i],alpha_results[4,i], alpha_results[5,i], alpha_results[6,i], alpha_results[7,i], alpha_results[8,i], alpha_results[9,i], alpha_results[10,i], alpha_results[11,i], alpha_results[12,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k,alpha=alpha)
+        alpha_results[:,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k,alpha=alpha)
     return alpha_results #matrix met kolommen de alpha waarden en rijen de eigenschappen
