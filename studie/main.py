@@ -197,3 +197,36 @@ def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k):
     for i,alpha in enumerate([0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1]): #0; 0,01; 0,05; 0,1; 0,2; 0,35; 0,5; 0,75; 1
         alpha_results[:,i] = RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k,alpha=alpha)
     return alpha_results #matrix met kolommen de alpha waarden en rijen de eigenschappen
+
+
+    #------------------------------------------------------------
+# SCHAKELAAR: simulaties (DPG's) wel of niet opnieuw runnen
+#   True  = DPGA, DPGB en DPGC opnieuw simuleren (traag!), daarna analyse + plots
+#   False = simulatie overslaan, enkel analyse + plots op de bestaande csv's
+#------------------------------------------------------------
+RUN_DPGS = True
+
+if __name__ == "__main__":
+    #imports hier en niet bovenaan: DPGA importeert zelf uit main (anders cirkelimport)
+    if RUN_DPGS:
+        import DPGA, DPGB, DPGC
+        print("Run DPGA...")
+        DPGA.get_output("DPGA", DPGA.f, DPGA.generate_data, DPGA.estimate_sigma(DPGA.mean, DPGA.cov, DPGA.f))
+        print("Run DPGB...")
+        DPGB.get_output("DPGB", DPGB.f, DPGB.generate_data, DPGB.estimate_sigma(DPGB.f))
+        print("Run DPGC...")
+        DPGC.get_output("DPGC", DPGC.f, DPGC.generate_data, DPGC.estimate_sigma(DPGC.f))
+    else:
+        print("Simulaties overgeslagen, bestaande csv's worden gebruikt.")
+
+    #de rest draait altijd vanzelf
+    import hypothesetesten
+    import runnen_en_plotten
+    for DPG in ["DPGA", "DPGB", "DPGC"]:
+        print(f"Hypothesetesten {DPG}...")
+        P = hypothesetesten.bereken_pwaarden(DPG)
+        hypothesetesten.holmcorrectie(P, DPG)
+        hypothesetesten.u_vorm_boom(DPG)
+        print(f"Plots {DPG}...")
+        runnen_en_plotten.plot(DPG)
+    print("Klaar.")
