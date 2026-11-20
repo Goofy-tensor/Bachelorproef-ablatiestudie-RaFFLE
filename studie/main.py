@@ -20,7 +20,7 @@ def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k=42,alpha=
     df["blin"] = -1
 
     #oob_score=True zodat estimators_samples_ (bootstrapindices per boom) zeker beschikbaar is
-    model = RaFFLE(n_estimators=100,random_state=k,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df,max_depth=20,max_model_depth=100,min_sample_fit=10,min_sample_alpha=5,min_sample_leaf=5,oob_score=True)
+    model = RaFFLE(n_estimators=100,random_state=k,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df,max_depth=20,max_model_depth=100,min_sample_fit=10,min_sample_alpha=5,min_sample_leaf=5,rel_tolerance=0,oob_score=True)
     model.fit(train_X, train_ruis_y)
 
     #Waarden die we willen weten
@@ -132,7 +132,7 @@ def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
         G = matrix[5,:] - matrix[4,:] #generalisatiegat per alpha (voor forestMSEs)
         rs_G[i] = stats.spearmanr(alpha,G).statistic
 
-        rs_rho[i] = stats.spearmanr(alpha,matrix[11,:]).statistic #geeft zo onderlijningen omdat het int verwacht maar in voorbeelden in de documentatie
+        rs_rho[i] = stats.spearmanr(alpha,matrix[11,:], alternative = "two sided").statistic #geeft zo onderlijningen omdat het int verwacht maar in voorbeelden in de documentatie
 
         pos_minMSE_forest = np.argmin(matrix[5,:]) #over testwaarden
         pos_minMSE_boom = np.argmin(matrix[7, :])
