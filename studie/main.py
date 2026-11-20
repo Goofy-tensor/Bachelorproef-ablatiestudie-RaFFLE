@@ -132,7 +132,7 @@ def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
         G = matrix[5,:] - matrix[4,:] #generalisatiegat per alpha (voor forestMSEs)
         rs_G[i] = stats.spearmanr(alpha,G).statistic
 
-        rs_rho[i] = stats.spearmanr(alpha,matrix[11,:], alternative = "two sided").statistic #geeft zo onderlijningen omdat het int verwacht maar in voorbeelden in de documentatie
+        rs_rho[i] = stats.spearmanr(alpha,matrix[11,:], alternative = "two-sided").statistic #geeft zo onderlijningen omdat het int verwacht maar in voorbeelden in de documentatie
 
         pos_minMSE_forest = np.argmin(matrix[5,:]) #over testwaarden
         pos_minMSE_boom = np.argmin(matrix[7, :])
