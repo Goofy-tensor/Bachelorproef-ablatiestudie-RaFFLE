@@ -204,17 +204,29 @@ def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k):
 #   True  = DPGA, DPGB en DPGC opnieuw simuleren (traag!), daarna analyse + plots
 #   False = simulatie overslaan, enkel analyse + plots op de bestaande csv's
 #------------------------------------------------------------
-RUN_DPGS = [DPGA, DPGB, DPGC] #alleen de DPG's die je wil runnen (anders overslaan)
+#------------------------------------------------------------
+# Welke DGP's opnieuw simuleren? Wat niet in de lijst staat, gebruikt de bestaande csv's.
+#   ["DPGC"]                  = enkel C simuleren
+#   ["DPGA","DPGB","DPGC"]    = alles simuleren
+#   []                        = niets simuleren, enkel analyse + plots
+#------------------------------------------------------------
+RUN_DPGS = ["DPGC"]
+
+# Welke DGP's analyseren (hypothesetesten + plots)?
+ANALYSE_DPGS = ["DPGA", "DPGB", "DPGC"]
+
 if __name__ == "__main__":
     #imports hier en niet bovenaan: DPGA importeert zelf uit main (anders cirkelimport)
-    import DPGA, DPGB, DPGC
     if "DPGA" in RUN_DPGS:
+        import DPGA
         print("Run DPGA...")
         DPGA.get_output("DPGA", DPGA.f, DPGA.generate_data, DPGA.estimate_sigma(DPGA.mean, DPGA.cov, DPGA.f))
     if "DPGB" in RUN_DPGS:
+        import DPGB
         print("Run DPGB...")
         DPGB.get_output("DPGB", DPGB.f, DPGB.generate_data, DPGB.estimate_sigma(DPGB.f))
     if "DPGC" in RUN_DPGS:
+        import DPGC
         print("Run DPGC...")
         DPGC.get_output("DPGC", DPGC.f, DPGC.generate_data, DPGC.estimate_sigma(DPGC.f))
     if not RUN_DPGS:
@@ -223,4 +235,11 @@ if __name__ == "__main__":
     #de rest draait altijd vanzelf
     import hypothesetesten
     import runnen_en_plotten
-    ...
+    for DPG in ANALYSE_DPGS:
+        print(f"Hypothesetesten {DPG}...")
+        P = hypothesetesten.bereken_pwaarden(DPG)
+        hypothesetesten.holmcorrectie(P, DPG)
+        hypothesetesten.u_vorm_boom(DPG)
+        print(f"Plots {DPG}...")
+        runnen_en_plotten.plot(DPG)
+    print("Klaar.")
