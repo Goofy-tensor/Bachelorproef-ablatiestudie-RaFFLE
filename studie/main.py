@@ -20,7 +20,7 @@ def RaFFLE_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k=42,alpha=
     df["blin"] = -1
 
     #oob_score=True zodat estimators_samples_ (bootstrapindices per boom) zeker beschikbaar is
-    model = RaFFLE(n_estimators=100,random_state=k,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df,max_depth=20,max_model_depth=100,min_sample_fit=10,min_sample_alpha=5,min_sample_leaf=5,rel_tolerance=0,oob_score=True)
+    model = RaFFLE(n_estimators=100,random_state=k,alpha=alpha,n_features_node=1,n_features_tree=1,df_settings=df,max_depth=20,max_model_depth=100,min_sample_fit=10,min_sample_alpha=5,min_sample_leaf=5,rel_tolerance=0.0000001,oob_score=True)
     model.fit(train_X, train_ruis_y)
 
     #Waarden die we willen weten
@@ -204,29 +204,23 @@ def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k):
 #   True  = DPGA, DPGB en DPGC opnieuw simuleren (traag!), daarna analyse + plots
 #   False = simulatie overslaan, enkel analyse + plots op de bestaande csv's
 #------------------------------------------------------------
-RUN_DPGS = True
-
+RUN_DPGS = [DPGA, DPGB, DPGC] #alleen de DPG's die je wil runnen (anders overslaan)
 if __name__ == "__main__":
     #imports hier en niet bovenaan: DPGA importeert zelf uit main (anders cirkelimport)
-    if RUN_DPGS:
-        import DPGA, DPGB, DPGC
+    import DPGA, DPGB, DPGC
+    if "DPGA" in RUN_DPGS:
         print("Run DPGA...")
         DPGA.get_output("DPGA", DPGA.f, DPGA.generate_data, DPGA.estimate_sigma(DPGA.mean, DPGA.cov, DPGA.f))
+    if "DPGB" in RUN_DPGS:
         print("Run DPGB...")
         DPGB.get_output("DPGB", DPGB.f, DPGB.generate_data, DPGB.estimate_sigma(DPGB.f))
+    if "DPGC" in RUN_DPGS:
         print("Run DPGC...")
         DPGC.get_output("DPGC", DPGC.f, DPGC.generate_data, DPGC.estimate_sigma(DPGC.f))
-    else:
+    if not RUN_DPGS:
         print("Simulaties overgeslagen, bestaande csv's worden gebruikt.")
 
     #de rest draait altijd vanzelf
     import hypothesetesten
     import runnen_en_plotten
-    for DPG in ["DPGA", "DPGB", "DPGC"]:
-        print(f"Hypothesetesten {DPG}...")
-        P = hypothesetesten.bereken_pwaarden(DPG)
-        hypothesetesten.holmcorrectie(P, DPG)
-        hypothesetesten.u_vorm_boom(DPG)
-        print(f"Plots {DPG}...")
-        runnen_en_plotten.plot(DPG)
-    print("Klaar.")
+    ...
