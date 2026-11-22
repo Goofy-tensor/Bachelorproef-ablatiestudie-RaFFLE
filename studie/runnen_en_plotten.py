@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import savefig
+from paden import pad
 
 #SNR ∈ {10,3,1}, N ∈ {250,1000,4000}, α ∈ A (9 waarden) (al in code), R = 30 (al in code)
 alpha = [0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1]
@@ -29,7 +30,7 @@ def plot(DPG):
     z = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     for j in range(3):
         for i in range(3):
-            matrix = np.genfromtxt(f'data{DPG}{N[j]}-{SNR[i]}.csv', delimiter=',')
+            matrix = np.genfromtxt(pad(f'data{DPG}{N[j]}-{SNR[i]}.csv'), delimiter=',')
             trainMSE = matrix[4,]
             testMSE = matrix[5,]
             trainMSE_boom = matrix[6,]
@@ -45,7 +46,7 @@ def plot(DPG):
             plt.ylabel('relatieve MSE', fontsize=12)
             plt.title(f'MSE in functie van alpha voor {DPG}{N[j]}-{SNR[i]}', fontsize=10)
             plt.legend(loc='best', fontsize=10)
-            plt.savefig(f'MSE_{DPG}{N[j]}-{SNR[i]}.png', bbox_inches='tight')
+            plt.savefig(pad(f'MSE_{DPG}{N[j]}-{SNR[i]}.png'), bbox_inches='tight')
             plt.show()
     return
 if __name__ == "__main__":

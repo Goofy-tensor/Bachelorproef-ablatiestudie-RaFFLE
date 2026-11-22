@@ -56,3 +56,7 @@ D_afgerond    = fit(1.0, df_met(2, 3, 5))         #naar boven afgerond
 #als fractioneel == afgekapt of afgerond, dan worden niet-gehele df stilletjes omgezet
 print("fractioneel == afgekapt:", np.allclose(D_fractioneel, D_afgekapt))
 print("fractioneel == afgerond:", np.allclose(D_fractioneel, D_afgerond))
+
+M = np.genfromtxt(r'C:\Users\warre\Documents\Github\Bachelorproef\dataDPGC1000-3.csv', delimiter=',')
+print(np.round(M[7], 4))   # test-MSE boom
+print(np.round(M[5], 4))   # test-MSE forest

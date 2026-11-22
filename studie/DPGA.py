@@ -1,6 +1,7 @@
 import numpy as np
 from main import iterate_predictions
 import csv
+from paden import pad
 
 #Y = f(X) + eps
 #eps uit normale verdeling
@@ -76,16 +77,16 @@ def get_output(DPG,fun1,fun2,S):
     for N in [250,1000,4000]:
         for i in range(3):#aanpassen i naar RNS
             out = iterate_predictions(fun1,fun2,S[i],DPG,N,SNR[i])
-            with open(f'data{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
+            with open(pad(f'data{DPG}{N}-{SNR[i]}.csv'), 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
                 for j in range(14):#alle 14 rijen (rij 13 = train-MSE boom op eigen bootstrapsample), absolute waarden
                     spamwriter.writerow(out[0][j,])
-            with open(f'relatief{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
+            with open(pad(f'relatief{DPG}{N}-{SNR[i]}.csv'), 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
                 t_05, t_1 = relatieve_mse(out[0])
                 for rij in np.vstack((t_05, t_1)):#eerst 4 rijen t.o.v. 0.5, dan 4 rijen t.o.v. 1
                     spamwriter.writerow(rij)
-            with open(f'hypothese{DPG}{N}-{SNR[i]}.csv', 'w+', newline='') as csvfile:
+            with open(pad(f'hypothese{DPG}{N}-{SNR[i]}.csv'), 'w+', newline='') as csvfile:
                 spamwriter = csv.writer(csvfile)
                 for k in range(1,12): #11 rijen hypothese-output (out[1] t/m out[11])
                     spamwriter.writerow(out[k])

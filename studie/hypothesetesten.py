@@ -2,6 +2,7 @@ import numpy as np
 from scipy import stats
 import csv
 from statsmodels.stats import multitest
+from paden import pad
 
 #Rijen van hypothese{DPG}{N}-{SNR}.csv (11 rijen, 30 replicaties):
 #0 rs_trainMSE, 1 omkeringen, 2 rs_G, 3 rs_rho, 4 delta (forest - boom, rangindex),
@@ -33,7 +34,7 @@ def bereken_pwaarden(DPG):
     for j in range(3):
         for i in range(3): #i aanpassen naar de SNR
             SNR = [1,3,10]
-            matrix = np.genfromtxt(f'hypothese{DPG}{N[j]}-{SNR[i]}.csv', delimiter=',') # shape: (11,30)
+            matrix = np.genfromtxt(pad(f'hypothese{DPG}{N[j]}-{SNR[i]}.csv'), delimiter=',') # shape: (11,30)
             c = 3*j + i
 
             res_pvalues[0][c] = safe_wilcoxon(matrix[0,],"greater") #rs_trainMSE
@@ -92,7 +93,7 @@ def u_vorm_boom(DPG, R=30):
     res = np.full((3,9), np.nan)
     for j in range(3):
         for i in range(3):
-            alle = np.stack([np.genfromtxt(f'data_per_iteratie{DPG}{N[j]}-{SNR[i]}-{r}.csv', delimiter=',')
+            alle = np.stack([np.genfromtxt(pad(f'data_per_iteratie{DPG}{N[j]}-{SNR[i]}-{r}.csv'), delimiter=',')
                              for r in range(R)]) # (R,14,9)
             gem_boom = alle[:,7,:].mean(axis=0) #gemiddelde test-MSE-curve van de boom
             a, b, _ = np.polyfit(K, gem_boom, 2)
@@ -103,7 +104,7 @@ def u_vorm_boom(DPG, R=30):
 
 def hulp_write(DPG, name, values):
     values = np.atleast_2d(values)      # 1D (9,) wordt (1,9)
-    with open(f'{name}{DPG}.csv', 'w+', newline='') as csvfile:
+    with open(pad(f'{name}{DPG}.csv'), 'w+', newline='') as csvfile:
         spamwriter = csv.writer(csvfile)
         for rij in values:
             spamwriter.writerow(rij)

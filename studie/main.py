@@ -3,6 +3,7 @@ from sklearn.metrics import r2_score,mean_squared_error
 import numpy as np
 from scipy import stats
 import csv
+from paden import pad
 
 #Met model.predict(X, individual=True) krijg je de voorspelling van elke boom apart => in matrix
 #dus fout per boom, forestfout en correlatie uit één fit
@@ -121,7 +122,7 @@ def iterate_predictions(fun1,fun2,SIGMA,DPG,N,SNR):
         train_X, train_y, train_ruis_y, test_X, test_y, test_ruis_y = fun2(fun1, N, SIGMA,i)
         matrix = alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,i) #dim = (14,9)
         alle[i] = matrix
-        with open(f'data_per_iteratie{DPG}{N}-{SNR}-{i}.csv', 'w+', newline='') as csvfile:
+        with open(pad(f'data_per_iteratie{DPG}{N}-{SNR}-{i}.csv'), 'w+', newline='') as csvfile:
             spamwriter = csv.writer(csvfile)
             for j in range(14):
                 spamwriter.writerow(matrix[j,])
@@ -167,13 +168,20 @@ def omkeringen(l):
     return count
 
 def in_min(p): #ligt het min van de kwadratische fit, -b/(2c) tussen alhpa = 0,resp 1
+    #LET OP: deze oude codering wordt enkel nog in de hypothese*.csv (rij 6 en 8) bewaard.
+    #Voor het rapporteren van de vorm: gebruik vorm_forest / vorm_boom uit Extra_hypothesetesten.py
     if p[0] > 0:
         if 1 < -p[1]/(2*p[0]) < 9: #p[0] = c, p[1] = b, p[2] = a
             return 1
         else: #monotoom als de x-waarde van het minimum niet tussen 1 of 9 ligt
             return 2
-    else:
-        return 0
+    elif p[0] == 0:#dan is het monotoom (hoewel ik vermoed dat dit geen optie is als je een 2e graadsfit vraagt)
+        return 2
+    else: #p[0] < 0
+        if 1 < -p[1]/(2*p[0]) < 9:
+            return 0
+        else:
+            return 2
 
 #Nagaan welke modellen er gebruikt worden
 def totaltypes(model): #ik denk dat dit niet zo efficiënt is
@@ -199,18 +207,13 @@ def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k):
     return alpha_results #matrix met kolommen de alpha waarden en rijen de eigenschappen
 
 
-    #------------------------------------------------------------
-# SCHAKELAAR: simulaties (DPG's) wel of niet opnieuw runnen
-#   True  = DPGA, DPGB en DPGC opnieuw simuleren (traag!), daarna analyse + plots
-#   False = simulatie overslaan, enkel analyse + plots op de bestaande csv's
-#------------------------------------------------------------
 #------------------------------------------------------------
 # Welke DGP's opnieuw simuleren? Wat niet in de lijst staat, gebruikt de bestaande csv's.
 #   ["DPGC"]                  = enkel C simuleren
 #   ["DPGA","DPGB","DPGC"]    = alles simuleren
 #   []                        = niets simuleren, enkel analyse + plots
 #------------------------------------------------------------
-RUN_DPGS = ["DPGC"]
+RUN_DPGS = []
 
 # Welke DGP's analyseren (hypothesetesten + plots)?
 ANALYSE_DPGS = ["DPGA", "DPGB", "DPGC"]
@@ -235,11 +238,14 @@ if __name__ == "__main__":
     #de rest draait altijd vanzelf
     import hypothesetesten
     import runnen_en_plotten
+    import Extra_hypothesetesten #nieuw: vormtellingen en tweezijdige rho-toets
     for DPG in ANALYSE_DPGS:
         print(f"Hypothesetesten {DPG}...")
         P = hypothesetesten.bereken_pwaarden(DPG)
         hypothesetesten.holmcorrectie(P, DPG)
         hypothesetesten.u_vorm_boom(DPG)
+        print(f"Extra analyse {DPG}...") #nieuw
+        Extra_hypothesetesten.extra_analyse(DPG) #nieuw
         print(f"Plots {DPG}...")
         runnen_en_plotten.plot(DPG)
     print("Klaar.")
