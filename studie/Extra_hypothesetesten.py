@@ -5,7 +5,7 @@ from statsmodels.stats import multitest
 # één definitie voor alles) en importeert NIETS uit main.py: geen pilot nodig, geen cirkelimport.
 # Leest enkel bestaande csv's, er hoeft niets opnieuw gesimuleerd te worden.
 from hypothesetesten import safe_wilcoxon, hulp_write
-from paden import pad
+from main import pad, K, NA, IDX_1
 
 # Vormcodes voor de kwadratische fit op de rangindex k = 1..9:
 #   1 = U-vorm (a > 0, minimum strikt in (1,9))   <- enige code die als U telt
@@ -16,7 +16,6 @@ from paden import pad
 
 N_WAARDEN = [250, 1000, 4000]
 SNR_WAARDEN = [1, 3, 10]
-K = np.arange(1, 10)
 
 
 def classificeer(y):
@@ -25,7 +24,7 @@ def classificeer(y):
         return 4
     kstar = -b / (2 * a)
     if a > 0:
-        return 1 if 1 < kstar < 9 else 2
+        return 1 if 1 < kstar < NA else 2
     return 3
 
 
@@ -33,7 +32,7 @@ def positie_min(y):
     k = int(np.argmin(y))
     if k == 0:
         return 0
-    if k == 8:
+    if k == NA - 1:
         return 2
     return 1
 
@@ -76,7 +75,7 @@ def recover_vorm(DPG, R=30):
                     y = M[rij, :]
                     vorm[classificeer(y) - 1, c] += 1
                     pos[positie_min(y), c] += 1
-                    diffs[r] = y[-1] - y.min()
+                    diffs[r] = y[IDX_1] - y.min()
                 verschil[0, c] = np.median(diffs)
         hulp_write(DPG, f"vorm_{naam}", vorm)
         hulp_write(DPG, f"argmin_pos_{naam}", pos)

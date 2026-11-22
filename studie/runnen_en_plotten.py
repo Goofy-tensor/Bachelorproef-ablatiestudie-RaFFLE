@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import savefig
-from paden import pad
+from main import pad, ALPHA, NA
 
 #SNR ∈ {10,3,1}, N ∈ {250,1000,4000}, α ∈ A (9 waarden) (al in code), R = 30 (al in code)
-alpha = [0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1]
+alpha = ALPHA
 
 #testplotje
 #x = out[:,4]
@@ -27,7 +27,7 @@ alpha = [0,0.01,0.05,0.1,0.2,0.35,0.5,0.75,1]
 def plot(DPG):
     N = [250,1000,4000]
     SNR = [1, 3, 10]
-    z = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    z = list(range(1, NA + 1))
     for j in range(3):
         for i in range(3):
             matrix = np.genfromtxt(pad(f'data{DPG}{N[j]}-{SNR[i]}.csv'), delimiter=',')

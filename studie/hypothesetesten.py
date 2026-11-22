@@ -2,7 +2,7 @@ import numpy as np
 from scipy import stats
 import csv
 from statsmodels.stats import multitest
-from paden import pad
+from main import pad, K, NA
 
 #Rijen van hypothese{DPG}{N}-{SNR}.csv (11 rijen, 30 replicaties):
 #0 rs_trainMSE, 1 omkeringen, 2 rs_G, 3 rs_rho, 4 delta (forest - boom, rangindex),
@@ -89,7 +89,6 @@ def u_vorm_boom(DPG, R=30):
     #rijen van het resultaat (3 x 9 cellen): 0 a, 1 k*, 2 voldoet aan a > 0 en k* in (1,9) (1 = ja, 0 = nee)
     N = [250,1000,4000]
     SNR = [1,3,10]
-    K = np.arange(1,10)
     res = np.full((3,9), np.nan)
     for j in range(3):
         for i in range(3):
@@ -98,7 +97,7 @@ def u_vorm_boom(DPG, R=30):
             gem_boom = alle[:,7,:].mean(axis=0) #gemiddelde test-MSE-curve van de boom
             a, b, _ = np.polyfit(K, gem_boom, 2)
             kstar = -b/(2*a) if a > 0 else np.nan #minimum enkel zinvol bij a > 0
-            res[:, 3*j+i] = [a, kstar, float(a > 0 and 1 < kstar < 9)]
+            res[:, 3*j+i] = [a, kstar, float(a > 0 and 1 < kstar < NA)]
     hulp_write(DPG, "u_vorm_boom", res)
     return res
 
