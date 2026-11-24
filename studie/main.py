@@ -280,6 +280,7 @@ if __name__ == "__main__":
         print(f"Plots {DPG}...")
         #runnen_en_plotten.plot(DPG)
         #runnen_en_plotten.plot_train_boom_drie()
-        runnen_en_plotten.plot_diepte()
+        #runnen_en_plotten.plot_diepte()
+        runnen_en_plotten.plot_test_boom_drie()
     print("Klaar.")
  

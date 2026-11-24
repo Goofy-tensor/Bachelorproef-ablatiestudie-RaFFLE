@@ -10,6 +10,7 @@ SNR_WAARDEN = [1, 3, 10]
 R = 30
 
 #rijen in data_per_iteratie{DPG}{N}-{SNR}-{r}.csv (gemiddeld over de 100 bomen)
+TEST_BOOM_RIJ = 8      # test-MSE boom
 RIJ_DIEPTE = 8         # max_depth (zonder lin-knopen)
 RIJ_MODEL_DIEPTE = 9   # max_model_depth (met lin-knopen)
 MAX_DEPTH_INSTELLING = 20  # max_depth die in main.py aan RaFFLE wordt meegegeven
@@ -58,10 +59,10 @@ def laad_train_boom(DPG, N, SNR, R=R):
     return laad_rij(DPG, TRAIN_BOOM_RIJ, N, SNR, R)
 
 
-def curven(DPG, N=None, SNR=None):
-    # alle replicatiecurven, elk genormaliseerd op alpha = 1; vorm (aantal, NA)
-    Y = laad_rij(DPG, TRAIN_BOOM_RIJ, N, SNR)
-    return Y / Y[:, [IDX_1]]
+def curven(DPG, N=None, SNR=None, rij=TRAIN_BOOM_RIJ, norm_idx=IDX_1):
+    # alle replicatiecurven, elk genormaliseerd op gekozen index (standaard alpha = 1); vorm (aantal, NA)
+    Y = laad_rij(DPG, rij, N, SNR)
+    return Y / Y[:, [norm_idx]]
 
 
 def plot_train_boom_drie(DPGS=("DPGA", "DPGB", "DPGC"), N=None, SNR=None,
@@ -73,7 +74,7 @@ def plot_train_boom_drie(DPGS=("DPGA", "DPGB", "DPGC"), N=None, SNR=None,
     fig, assen = plt.subplots(1, len(DPGS), figsize=(4.6 * len(DPGS), 4.2), sharey=True)
 
     for ax, DPG, kleur in zip(assen, DPGS, kleuren):
-        Y = curven(DPG, N, SNR)
+        Y = curven(DPG, N, SNR, rij=TRAIN_BOOM_RIJ, norm_idx=IDX_1)
         gem, sd = Y.mean(axis=0), Y.std(axis=0)
 
         ax.fill_between(z, gem - sd, gem + sd, color=kleur, alpha=0.2, lw=0,
@@ -91,6 +92,39 @@ def plot_train_boom_drie(DPGS=("DPGA", "DPGB", "DPGC"), N=None, SNR=None,
         ax.spines[['top', 'right']].set_visible(False)
 
     assen[0].set_ylabel(r'train-MSE boom / train-MSE bij $\alpha = 1$')
+    assen[0].legend(frameon=False, fontsize=8, loc='best')
+    fig.tight_layout()
+    fig.savefig(pad(bestand), bbox_inches='tight', dpi=300)
+    plt.show()
+
+
+def plot_test_boom_drie(DPGS=("DPGA", "DPGB", "DPGC"), N=None, SNR=None,
+                        bestand="testMSE_boom_gemiddeld_alle_DPG.png"):
+    z = np.arange(1, NA + 1)  # rangindex: het alpha-rooster is niet gelijkmatig
+    labels = [str(a).replace('.', ',') for a in ALPHA]
+    kleuren = ['#2b6cb0', '#c53030', '#2f855a']
+
+    fig, assen = plt.subplots(1, len(DPGS), figsize=(4.6 * len(DPGS), 4.2))
+
+    for ax, DPG, kleur in zip(assen, DPGS, kleuren):
+        Y = curven(DPG, N, SNR, rij=TEST_BOOM_RIJ, norm_idx=IDX_1)
+        gem, sd = Y.mean(axis=0), Y.std(axis=0)
+
+        ax.fill_between(z, gem - sd, gem + sd, color=kleur, alpha=0.2, lw=0,
+                        label=r'$\pm 1$ standaardafwijking')
+        ax.plot(z, gem, '-o', color=kleur, lw=2, ms=5, markerfacecolor='white',
+                markeredgewidth=1.5, label='gemiddelde')
+        ax.axhline(1, color='grey', ls=':', lw=1)
+        ax.axvline(z[IDX_1], color='grey', ls=':', lw=1)
+
+        ax.set_title(DPG.replace('DPG', 'DGP '), fontweight='bold')
+        ax.set_xticks(z)
+        ax.set_xticklabels(labels, rotation=60, fontsize=8)
+        ax.set_xlabel(r'$\alpha$')
+        ax.set_ylabel(r'test-MSE boom / test-MSE bij $\alpha = 1$')
+        ax.grid(True, alpha=0.25, lw=0.6)
+        ax.spines[['top', 'right']].set_visible(False)
+
     assen[0].legend(frameon=False, fontsize=8, loc='best')
     fig.tight_layout()
     fig.savefig(pad(bestand), bbox_inches='tight', dpi=300)
@@ -143,7 +177,8 @@ def plot_diepte(DPGS=("DPGA", "DPGB", "DPGC"), N=None, SNR=None,
 
 if __name__ == "__main__":
     #plot_train_boom_drie()
-    plot_diepte()
+    plot_test_boom_drie()
+    #plot_diepte()
     # plot('DPGA')
     # plot('DPGB')
     # plot('DPGC')
