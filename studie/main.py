@@ -244,10 +244,10 @@ def alpha_prediction(train_X,test_X,train_ruis_y,test_ruis_y,test_y,k):
 #   ["DPGA","DPGB","DPGC"]    = alles simuleren
 #   []                        = niets simuleren, enkel analyse + plots
 #------------------------------------------------------------
-RUN_DPGS = ["DPGA", "DPGB", "DPGC"]
+RUN_DPGS = []
  
 # Welke DGP's analyseren (hypothesetesten + plots)?
-ANALYSE_DPGS = ["DPGA", "DPGB", "DPGC"]
+ANALYSE_DPGS = ["DPGA","DPGB","DPGC"]
  
 if __name__ == "__main__":
     #imports hier en niet bovenaan: DPGA importeert zelf uit main (anders cirkelimport)
@@ -278,6 +278,7 @@ if __name__ == "__main__":
         print(f"Extra analyse {DPG}...") #nieuw
         Extra_hypothesetesten.extra_analyse(DPG) #nieuw
         print(f"Plots {DPG}...")
-        runnen_en_plotten.plot(DPG)
+        #runnen_en_plotten.plot(DPG)
+        runnen_en_plotten.plot_train_boom_drie()
     print("Klaar.")
  
