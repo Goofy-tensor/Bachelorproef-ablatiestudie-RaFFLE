@@ -3,28 +3,17 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import savefig
 from main import pad, ALPHA, NA, IDX_1, TRAIN_BOOM_RIJ
 
-#SNR ∈ {10,3,1}, N ∈ {250,1000,4000}, α ∈ A (9 waarden) (al in code), R = 30 (al in code)
+#SNR ∈ {10,3,1}, N ∈ {250,1000,4000}, α ∈ A (13 waarden) (al in code), R = 30 (al in code)
 alpha = ALPHA
 N_WAARDEN = [250, 1000, 4000]
 SNR_WAARDEN = [1, 3, 10]
 R = 30
 
-#testplotje
-#x = out[:,4]
-#y = out[:,5]
-#u = out[:,6]
-#v = out[:,7]
+#rijen in data_per_iteratie{DPG}{N}-{SNR}-{r}.csv (gemiddeld over de 100 bomen)
+RIJ_DIEPTE = 8         # max_depth (zonder lin-knopen)
+RIJ_MODEL_DIEPTE = 9   # max_model_depth (met lin-knopen)
+MAX_DEPTH_INSTELLING = 20  # max_depth die in main.py aan RaFFLE wordt meegegeven
 
-#plt.figure(1)
-#plt.plot(range(1,10), x, 'r-', label = 'TrainMSE in fucntie van alpha', markersize=5)
-#plt.plot(range(1,10), y, 'b-', label = 'TestMSE in fucntie van alpha', markersize=1)
-#plt.plot(range(1,10), u, 'o-', label = 'TrainboomMSE in fucntie van alpha', markersize=5)
-#plt.plot(range(1,10), v, 'g-', label = 'TestboomMSE in fucntie van alpha', markersize=1)
-#plt.xlabel('alpha', fontsize=12)
-#plt.ylabel('relatieve MSE', fontsize=12)
-#plt.title('relatieve RSS in functie van alpha', fontsize=10)
-#plt.legend(loc='best', fontsize=10)
-#plt.show()
 
 #algemene plots: (per N en SNR)
 def plot(DPG):
@@ -54,20 +43,24 @@ def plot(DPG):
     return
 
 
+def laad_rij(DPG, rij, N=None, SNR=None, R=R):
+    # gekozen rij per replicatie en alpha, over alle gevraagde (N, SNR)-cellen; vorm (aantal, NA)
+    ns = N_WAARDEN if N is None else [N]
+    snrs = SNR_WAARDEN if SNR is None else [SNR]
+    return np.vstack([
+        np.genfromtxt(pad(f'data_per_iteratie{DPG}{n}-{s}-{r}.csv'),
+                      delimiter=',')[rij]
+        for n in ns for s in snrs for r in range(R)])
+
 
 def laad_train_boom(DPG, N, SNR, R=R):
     # train-MSE boom (eigen bootstrapsample) per replicatie en alpha, vorm (R, NA)
-    return np.stack([
-        np.genfromtxt(pad(f'data_per_iteratie{DPG}{N}-{SNR}-{r}.csv'),
-                      delimiter=',')[TRAIN_BOOM_RIJ]
-        for r in range(R)])
+    return laad_rij(DPG, TRAIN_BOOM_RIJ, N, SNR, R)
 
 
 def curven(DPG, N=None, SNR=None):
     # alle replicatiecurven, elk genormaliseerd op alpha = 1; vorm (aantal, NA)
-    ns = N_WAARDEN if N is None else [N]
-    snrs = SNR_WAARDEN if SNR is None else [SNR]
-    Y = np.vstack([laad_train_boom(DPG, n, s) for n in ns for s in snrs])
+    Y = laad_rij(DPG, TRAIN_BOOM_RIJ, N, SNR)
     return Y / Y[:, [IDX_1]]
 
 
@@ -104,12 +97,53 @@ def plot_train_boom_drie(DPGS=("DPGA", "DPGB", "DPGC"), N=None, SNR=None,
     plt.show()
 
 
+def _band(ax, z, Y, kleur, label, ls='-'):
+    # gemiddelde +- 1 standaardafwijking over alle replicaties (en cellen)
+    gem, sd = Y.mean(axis=0), Y.std(axis=0)
+    ax.fill_between(z, gem - sd, gem + sd, color=kleur, alpha=0.18, lw=0)
+    ax.plot(z, gem, ls, marker='o', color=kleur, lw=2, ms=5,
+            markerfacecolor='white', markeredgewidth=1.5, label=label)
+
+
+def plot_diepte(DPGS=("DPGA", "DPGB", "DPGC"), N=None, SNR=None,
+                bestand="diepte_boom.png"):
+            #gemiddelde maximale diepte van de bomen, op dezelfde alpha-as
+    z = np.arange(1, NA + 1)  # rangindex: het alpha-rooster is niet gelijkmatig
+    labels = [str(a).replace('.', ',') for a in ALPHA]
+    kleuren = ['#2b6cb0', '#c53030', '#2f855a']
+
+    fig, assen = plt.subplots(2, len(DPGS), figsize=(4.6 * len(DPGS), 7), sharex=True)
+
+    for kol, (DPG, kleur) in enumerate(zip(DPGS, kleuren)):
+        ax = assen[0, kol]
+        _band(ax, z, laad_rij(DPG, RIJ_DIEPTE, N, SNR), kleur, 'max. diepte (zonder lin)')
+        _band(ax, z, laad_rij(DPG, RIJ_MODEL_DIEPTE, N, SNR), 'black',
+              'max. diepte (met lin)', ls='--')
+        ax.axhline(MAX_DEPTH_INSTELLING, color='grey', ls=':', lw=1)  # max_depth = 20
+        ax.set_xticks(z)
+        ax.set_xticklabels(labels, rotation=60, fontsize=8)
+        ax.set_xlabel(r'$\alpha$')
+
+        for rij in (0, 1):
+            a = assen[rij, kol]
+            a.grid(True, alpha=0.25, lw=0.6)
+            a.spines[['top', 'right']].set_visible(False)
+            # zelfde zone markeren als in de tekst (0,35 tot 0,7)
+            a.axvspan(z[ALPHA.index(0.35)], z[ALPHA.index(0.7)],
+                      color='grey', alpha=0.08, lw=0)
+
+    assen[0, 0].set_ylabel(r'train-MSE boom / train-MSE bij $\alpha = 1$')
+    assen[1, 0].set_ylabel('gemiddelde maximale diepte')
+    assen[0, 0].legend(frameon=False, fontsize=8, loc='best')
+    assen[1, 0].legend(frameon=False, fontsize=8, loc='best')
+    fig.tight_layout()
+    fig.savefig(pad(bestand), bbox_inches='tight', dpi=300)
+    plt.show()
+
+
 if __name__ == "__main__":
-    plot_train_boom_drie()
-
-
-
-if __name__ == "__main__":
-    plot('DPGA')
-    plot('DPGB')
-    plot('DPGC')
+    #plot_train_boom_drie()
+    plot_diepte()
+    # plot('DPGA')
+    # plot('DPGB')
+    # plot('DPGC')

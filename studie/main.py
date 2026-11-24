@@ -279,6 +279,7 @@ if __name__ == "__main__":
         Extra_hypothesetesten.extra_analyse(DPG) #nieuw
         print(f"Plots {DPG}...")
         #runnen_en_plotten.plot(DPG)
-        runnen_en_plotten.plot_train_boom_drie()
+        #runnen_en_plotten.plot_train_boom_drie()
+        runnen_en_plotten.plot_diepte()
     print("Klaar.")
  
