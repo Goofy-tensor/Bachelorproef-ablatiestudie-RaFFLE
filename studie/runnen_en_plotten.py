@@ -14,7 +14,7 @@ R = 30
 # Rijen in data_per_iteratie{DPG}{N}-{SNR}-{r}.csv
 TRAIN_FOREST_RIJ = 4
 TEST_FOREST_RIJ = 5
-TEST_BOOM_RIJ = 8
+TEST_BOOM_RIJ = 7
 RIJ_DIEPTE = 8
 RIJ_MODEL_DIEPTE = 9
 MAX_DEPTH_INSTELLING = 20
@@ -412,12 +412,65 @@ def plot_diepte(
     plt.show()
 
 
+def laad_test_forest(DPG, N, SNR, R=R):
+    # test-MSE forest per replicatie en alpha, vorm (R, NA)
+    return np.stack([
+        np.genfromtxt(pad(f'data_per_iteratie{DPG}{N}-{SNR}-{r}.csv'),
+                      delimiter=',')[5]
+        for r in range(R)])
+
+
+def curven(DPG, N=None, SNR=None):
+    # alle replicatiecurven, elk genormaliseerd op alpha = 0,5; vorm (aantal, NA)
+    ns = N_WAARDEN if N is None else [N]
+    snrs = SNR_WAARDEN if SNR is None else [SNR]
+    Y = np.vstack([laad_test_forest(DPG, n, s) for n in ns for s in snrs])
+    return Y / Y[:, [IDX_1]]
+
+
+def plot_test_forest_drie(DPGS=("DPGA", "DPGB", "DPGC"), N=None, SNR=None,
+                         bestand="testMSE_forest.png"):
+    z = np.arange(1, NA + 1)  # rangindex: het alpha-rooster is niet gelijkmatig
+    labels = [str(a).replace('.', ',') for a in ALPHA]
+    kleuren = ['#2b6cb0', '#c53030', '#2f855a']
+
+    fig, assen = plt.subplots(1, len(DPGS), figsize=(4.6 * len(DPGS), 4.2), sharey=True)
+
+    for ax, DPG, kleur in zip(assen, DPGS, kleuren):
+        Y = curven(DPG, N, SNR)
+        gem, sd = Y.mean(axis=0), Y.std(axis=0)
+
+        ax.fill_between(z, gem - sd, gem + sd, color=kleur, alpha=0.2, lw=0,
+                        label=r'$\pm 1$ standaardafwijking')
+        ax.plot(z, gem, '-o', color=kleur, lw=2, ms=5, markerfacecolor='white',
+                markeredgewidth=1.5, label='gemiddelde')
+        ax.axhline(1, color='grey', ls=':', lw=1)
+        ax.axvline(z[IDX_1], color='grey', ls=':', lw=1)
+
+        ax.set_title(DPG.replace('DPG', 'DGP '), fontweight='bold')
+        ax.set_xticks(z)
+        ax.set_xticklabels(labels, rotation=60, fontsize=8)
+        ax.set_xlabel(r'$\alpha$')
+        ax.grid(True, alpha=0.25, lw=0.6)
+        ax.spines[['top', 'right']].set_visible(False)
+
+    assen[0].set_ylabel(r'test-MSE forest / test-MSE bij $\alpha = 1$')
+    assen[0].legend(frameon=False, fontsize=8, loc='best')
+    fig.tight_layout()
+    fig.savefig(pad(bestand), bbox_inches='tight', dpi=300)
+    plt.show()
+    return
+
+if __name__ == "__main__":
+    plot_test_forest_drie()
+
+
 if __name__ == "__main__":
     # plot_train_boom_drie()
     # plot_test_boom_drie()
 
     plot_generalisatiegat_drie()
-
+    plot_test_forest_drie()
     # plot_diepte()
     # plot('DPGA')
     # plot('DPGB')
